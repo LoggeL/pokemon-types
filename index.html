@@ -288,7 +288,14 @@
       <div class="autocomplete-list" id="acList" style="display:none"></div>
     </div>
     <div class="autofill-hint" id="autofillHint">✨ Typen automatisch eingetragen</div>
-    <p style="font-size:0.75rem;color:#555;margin-bottom:12px">Pokémon aus der Liste auswählen — Typen werden automatisch gesetzt.</p>
+    <p style="font-size:0.75rem;color:#555;margin-bottom:8px">Pokémon aus der Liste auswählen — Typen werden automatisch gesetzt.</p>
+    <button onclick="toggleTypeOverride()" style="background:none;border:1px solid #2a2a4e;color:#666;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;margin-bottom:10px" id="typeOverrideToggle">⚙️ Typ manuell überschreiben (Arceus / Amigento)</button>
+    <div id="typeOverridePanel" style="display:none">
+      <label>Typ 1</label>
+      <div class="type-select-grid" id="type1Grid"></div>
+      <label>Typ 2 (optional)</label>
+      <div class="type-select-grid" id="type2Grid"></div>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveSlot()">Speichern</button>
@@ -497,6 +504,11 @@ function toggleMoveExpand(slotIdx, moveIdx) {
   reRenderPanel(slotIdx);
 }
 
+function toggleTypeOverride() {
+  const panel = document.getElementById('typeOverridePanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
 function reRenderPanel(slotIdx) {
   document.getElementById('effPanel').innerHTML = renderEffPanel(slotIdx);
 }
@@ -639,6 +651,8 @@ function openModal(idx) {
   selectedPokeId = null;
   document.getElementById('pokeName').value = '';
   document.getElementById('autofillHint').classList.remove('visible');
+  document.getElementById('typeOverridePanel').style.display = 'none';
+  buildTypeSelectors();
   document.getElementById('overlay').classList.add('open');
   setTimeout(() => document.getElementById('pokeName').focus(), 100);
 }
