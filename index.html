@@ -196,11 +196,12 @@
   .modal input[type=text] { width: 100%; background: #1a1a2e; border: 1px solid #3a3a6e; color: #eee; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 4px; }
   .modal input[type=text]:focus { outline: none; border-color: #6060ff; }
   .autocomplete-wrap { position: relative; margin-bottom: 12px; }
-  .autocomplete-list { position: absolute; left: 0; right: 0; background: #1e2a4a; border: 1px solid #3a3a6e; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 200; }
-  .ac-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.85rem; }
+  .autocomplete-list { position: absolute; left: 0; right: 0; background: #1a2540; border: 1px solid #3a3a6e; border-radius: 0 0 12px 12px; max-height: 280px; overflow-y: auto; z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+  .ac-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .ac-item:last-child { border-bottom: none; }
   .ac-item:hover, .ac-item.focused { background: #2a3a6e; }
-  .ac-sprite { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
-  .ac-name { flex: 1; text-transform: capitalize; }
+  .ac-sprite { width: 52px; height: 52px; object-fit: contain; image-rendering: pixelated; flex-shrink: 0; }
+  .ac-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
   .ac-types { display: flex; gap: 3px; }
   .ac-loading { padding: 10px; text-align: center; color: #666; font-size: 0.8rem; }
   .autofill-hint { font-size: 0.7rem; color: #6060cc; margin-bottom: 10px; display: none; }
