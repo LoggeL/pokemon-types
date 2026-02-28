@@ -555,9 +555,11 @@ function renderEffPanel(idx) {
   let moveGridHtml = '';
   for (let i = 0; i < 4; i++) {
     const mv = moves[i] || {name:'',type:null};
-    const barColor = mv.type ? TYPE_COLORS[mv.type] : 'transparent';
-    const typeBtnHtml = mv.type
-      ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMoveExpand(${idx},${i})">${typeLabel(mv.type)}</button>`
+    const genStats = mv.moveId ? getMoveStatsAtGen(mv.moveId) : null;
+    const effectiveType = genStats?.type || mv.type;
+    const barColor = effectiveType ? TYPE_COLORS[effectiveType] : 'transparent';
+    const typeBtnHtml = effectiveType
+      ? `<button class="move-type-badge-sm" style="${typeStyle(effectiveType)}" onmousedown="toggleMoveExpand(${idx},${i})">${typeLabel(effectiveType)}</button>`
       : `<span class="move-type-badge-sm move-type-badge-empty">?</span>`;
     moveGridHtml += `<div style="position:relative">
       <div class="move-card${activeMove===i?' active-move':''}" onclick="toggleMoveExpand(${idx},${i})">
@@ -595,16 +597,17 @@ function renderEffPanel(idx) {
         const mv = moves[activeMove];
         const desc = mv.moveId ? (moveDescCache[mv.moveId]?.[currentLang] || moveDescCache[mv.moveId]?.en || '') : '';
         const stats = mv.moveId ? getMoveStatsAtGen(mv.moveId) : null;
+        const expandType = stats?.type || mv.type;
         const statsHtml = stats ? `<div class="move-stats">
           ${stats.power != null ? `<div class="move-stat">${currentLang==='de'?'Stärke':'Power'}<span>${stats.power}</span></div>` : ''}
           ${stats.accuracy != null ? `<div class="move-stat">${currentLang==='de'?'Genauigkeit':'Accuracy'}<span>${stats.accuracy}%</span></div>` : ''}
           ${stats.pp != null ? `<div class="move-stat">PP<span>${stats.pp}</span></div>` : ''}
         </div>` : '';
         return `<div class="move-expand" style="margin-top:8px">
-          <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${typeLabel(mv.type)}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
+          <div class="move-expand-title">⚡ <span class="badge t-${expandType}">${typeLabel(expandType)}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
           ${statsHtml}
           ${desc ? `<p style="font-size:0.78rem;color:#bbb;margin:0 0 10px;line-height:1.5">${desc}</p>` : ''}
-          ${stats?.power ? renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']]) : ''}
+          ${stats?.power && expandType ? renderEffGroups(calcMoveOffense(expandType), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']]) : ''}
         </div>`;
       })() : ''}
     </div>
@@ -1272,6 +1275,7 @@ function getMoveStatsAtGen(id) {
   const d = moveStatCache[id];
   if (!d) return null;
   let power = d.power, accuracy = d.accuracy, pp = d.pp;
+  let type = moveTypeCache[id] || null;
   const past = (d.past_values || [])
     .map(pv => ({ ...pv, g: VG_TO_GEN[pv.version_group?.name] || 9 }))
     .sort((a,b) => a.g - b.g);
@@ -1280,10 +1284,11 @@ function getMoveStatsAtGen(id) {
       if (pv.power !== undefined && pv.power !== null) power = pv.power;
       if (pv.accuracy !== undefined && pv.accuracy !== null) accuracy = pv.accuracy;
       if (pv.pp !== undefined && pv.pp !== null) pp = pv.pp;
+      if (pv.type?.name) type = pv.type.name.charAt(0).toUpperCase() + pv.type.name.slice(1);
       break;
     }
   }
-  return { power, accuracy, pp };
+  return { power, accuracy, pp, type };
 }
 
 function buildGenToggle() {
