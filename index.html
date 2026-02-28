@@ -288,11 +288,7 @@
       <div class="autocomplete-list" id="acList" style="display:none"></div>
     </div>
     <div class="autofill-hint" id="autofillHint">✨ Typen automatisch eingetragen</div>
-    <label>Typ 1 *</label>
-    <div class="type-select-grid" id="type1Grid"></div>
-    <label>Typ 2 (optional)</label>
-    <div class="type-select-grid" id="type2Grid"></div>
-
+    <p style="font-size:0.75rem;color:#555;margin-bottom:12px">Pokémon aus der Liste auswählen — Typen werden automatisch gesetzt.</p>
     <div class="modal-btns">
       <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveSlot()">Speichern</button>
@@ -643,7 +639,6 @@ function openModal(idx) {
   selectedPokeId = null;
   document.getElementById('pokeName').value = '';
   document.getElementById('autofillHint').classList.remove('visible');
-  buildTypeSelectors();
   document.getElementById('overlay').classList.add('open');
   setTimeout(() => document.getElementById('pokeName').focus(), 100);
 }
@@ -711,7 +706,7 @@ function updateTypeSelectors() {
 
 function saveSlot() {
   const name = document.getElementById('pokeName').value.trim() || 'Pokémon';
-  if (!sel1) { alert('Bitte Typ 1 auswählen!'); return; }
+  if (!sel1) { alert('Bitte ein Pokémon aus der Liste auswählen!'); return; }
   const existingMoves = team[editingSlot]?.moves || Array(4).fill(null).map(()=>({name:'',type:null}));
   team[editingSlot] = {
     name,
