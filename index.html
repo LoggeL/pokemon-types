@@ -488,10 +488,6 @@ function renderEffPanel(idx) {
       </div>
       <div class="move-ac-list" id="moveAc${idx}_${i}" style="display:none"></div>
 
-      ${activeMove===i && mv.type ? `<div class="move-expand">
-        <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${mv.type}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
-        ${renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
-      </div>` : ''}
     </div>`;
   }
 
@@ -507,6 +503,10 @@ function renderEffPanel(idx) {
     <div class="moves-strip">
       <div class="moves-strip-title">⚔️ Attacken</div>
       <div class="move-grid">${moveGridHtml}</div>
+      ${activeMove !== null && moves[activeMove]?.type ? `<div class="move-expand" style="margin-top:8px">
+        <div class="move-expand-title">⚡ <span class="badge t-${moves[activeMove].type}">${moves[activeMove].type}</span>${moves[activeMove].name ? ` — ${moves[activeMove].name}` : ''}</div>
+        ${renderEffGroups(calcMoveOffense(moves[activeMove].type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
+      </div>` : ''}
     </div>
     <div class="eff-body">
       <div class="eff-section">
