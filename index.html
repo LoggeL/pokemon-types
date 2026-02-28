@@ -351,6 +351,12 @@
 <script>
 const TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
 
+const TYPE_MIN_GEN = { Dark: 2, Steel: 2, Fairy: 6 }; // all others: Gen 1
+
+function typesForGen(gen) {
+  return TYPES.filter(t => (TYPE_MIN_GEN[t] || 1) <= gen);
+}
+
 const TYPE_DE = {
   Normal:'Normal', Fire:'Feuer', Water:'Wasser', Electric:'Elektro',
   Grass:'Pflanze', Ice:'Eis', Fighting:'Kampf', Poison:'Gift',
@@ -454,7 +460,7 @@ function getDefMultiplier(type1, type2, attacker) {
 
 function calcDefense(type1, type2) {
   const groups = { 4:[], 2:[], 0.5:[], 0.25:[], 0:[] };
-  for (const atk of TYPES) {
+  for (const atk of typesForGen(currentGen)) {
     const m = getDefMultiplier(type1, type2, atk);
     if (groups[m] !== undefined) groups[m].push(atk);
   }
@@ -463,7 +469,7 @@ function calcDefense(type1, type2) {
 
 function calcAttack(type1, type2) {
   const groups = { 2:[], 0.5:[], 0:[] };
-  for (const def of TYPES) {
+  for (const def of typesForGen(currentGen)) {
     const m1 = CHART[type1]?.[def] ?? 1;
     const m2 = type2 ? (CHART[type2]?.[def] ?? 1) : 1;
     const best = Math.max(m1, m2);
@@ -477,7 +483,7 @@ function calcAttack(type1, type2) {
 function calcMoveOffense(moveType) {
   // Offensive effectiveness of a single move type
   const groups = { 2:[], 0.5:[], 0:[] };
-  for (const def of TYPES) {
+  for (const def of typesForGen(currentGen)) {
     const m = CHART[moveType]?.[def] ?? 1;
     if (m >= 2) groups[2].push(def);
     else if (m === 0) groups[0].push(def);
@@ -841,7 +847,7 @@ function saveSlot() {
 function renderQsTypes() {
   const grid = document.getElementById('typeGrid');
   grid.innerHTML = '';
-  for (const type of TYPES) {
+  for (const type of typesForGen(currentGen)) {
     const b = document.createElement('button');
     b.className = 'type-btn';
     b.textContent = typeLabel(type);
@@ -858,13 +864,13 @@ function showQs(type, btn) {
   qsActive = btn;
 
   const defGroups = {};
-  for (const atk of TYPES) {
+  for (const atk of typesForGen(currentGen)) {
     const m = CHART[atk]?.[type] ?? 1;
     if (!defGroups[m]) defGroups[m] = [];
     defGroups[m].push(atk);
   }
   const atkGroups = {};
-  for (const def of TYPES) {
+  for (const def of typesForGen(currentGen)) {
     const m = CHART[type]?.[def] ?? 1;
     if (!atkGroups[m]) atkGroups[m] = [];
     atkGroups[m].push(def);
@@ -1261,6 +1267,9 @@ function setGen(g) {
   currentGen = g;
   buildGenToggle();
   if (selectedSlot >= 0) reRenderPanel(selectedSlot);
+  renderQsTypes();
+  if (qsActive) { qsActive.style.outline = 'none'; qsActive = null; }
+  document.getElementById('qsPanel').innerHTML = '';
 }
 let _moveEN = [];
 
