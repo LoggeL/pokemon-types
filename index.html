@@ -753,23 +753,32 @@ function renderOpponentSection(slotIdx) {
       ${lvMoves.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px">
         ${lvMoves.map(m => {
           const isActive = activeOppMove?.name === m.name;
-          return `<span title="Lv.${m.level}" onclick="toggleOppMove(${slotIdx},'${m.name.replace(/'/g,"\\'")}','${m.type||''}')"
+          return `<span title="Lv.${m.level}" onclick="toggleOppMove(${slotIdx},'${m.name.replace(/'/g,"\\'")}','${m.type||''}','${m.id}')"
             style="font-size:0.72rem;background:${isActive?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.07)'};border-radius:6px;padding:3px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;border:1px solid ${isActive?'rgba(255,255,255,0.3)':'transparent'}">
             ${m.type ? `<span class="badge t-${m.type}" style="font-size:0.6rem;padding:1px 5px">${typeLabel(m.type)}</span>` : ''}
             ${m.name} <span style="color:#555;font-size:0.65rem">Lv.${m.level}</span>
           </span>`;
+
         }).join('')}
       </div>
       ${activeOppMove?.type ? (() => {
-        const { type1, type2 } = getPokeTypesAtGen(team[slotIdx], currentGen);
-        const mult = getDefMultiplier(type1, type2, activeOppMove.type);
-        const multStr = mult >= 4 ? '4×' : mult >= 2 ? '2×' : mult === 0 ? '0× (immun)' : mult <= 0.25 ? '¼×' : mult < 1 ? '½×' : '1×';
-        const multColor = mult >= 2 ? '#f88' : mult === 0 ? '#888' : mult < 1 ? '#8f8' : '#aaa';
+        const stats = activeOppMove.id ? getMoveStatsAtGen(activeOppMove.id) : null;
+        const isStatus = stats && stats.power === null;
+        let effectHtml;
+        if (isStatus) {
+          const label = currentLang === 'de' ? 'Status-Attacke — kein Schaden' : 'Status move — no damage';
+          effectHtml = `<span style="color:#888;font-style:italic">${label}</span>`;
+        } else {
+          const { type1, type2 } = getPokeTypesAtGen(team[slotIdx], currentGen);
+          const mult = getDefMultiplier(type1, type2, activeOppMove.type);
+          const multStr = mult >= 4 ? '4×' : mult >= 2 ? '2×' : mult === 0 ? (currentLang==='de'?'0× (immun)':'0× (immune)') : mult <= 0.25 ? '¼×' : mult < 1 ? '½×' : '1×';
+          const multColor = mult >= 2 ? '#f88' : mult === 0 ? '#888' : mult < 1 ? '#8f8' : '#aaa';
+          effectHtml = `${currentLang==='de'?'trifft':'hits'} <strong>${team[slotIdx]?.name}</strong> ${currentLang==='de'?'für':'for'} <strong style="color:${multColor};font-size:1rem">${multStr}</strong>`;
+        }
         return `<div style="margin-top:8px;background:rgba(0,0,0,0.3);border-radius:8px;padding:8px 10px;font-size:0.8rem">
           <span class="badge t-${activeOppMove.type}">${typeLabel(activeOppMove.type)}</span>
           <strong style="color:#fff;margin:0 6px">${activeOppMove.name}</strong>
-          ${currentLang==='de'?'trifft':'hits'} <strong>${team[slotIdx]?.name}</strong>
-          ${currentLang==='de'?'für':'for'} <strong style="color:${multColor};font-size:1rem">${multStr}</strong>
+          ${effectHtml}
         </div>`;
       })() : ''}` : `<span style="color:#555;font-size:0.75rem">${currentLang==='de'?'Keine Level-Up-Attacken in dieser Gen/Level-Kombi':'No level-up moves for this gen/level'}</span>`}
     </div>`;
@@ -870,8 +879,8 @@ async function prefetchOpponentMoveTypes(slotIdx) {
   }
 }
 
-function toggleOppMove(slotIdx, name, type) {
-  activeOppMove = (activeOppMove?.name === name) ? null : { name, type: type || null };
+function toggleOppMove(slotIdx, name, type, id) {
+  activeOppMove = (activeOppMove?.name === name) ? null : { name, type: type || null, id: id || null };
   reRenderPanel(slotIdx);
 }
 
