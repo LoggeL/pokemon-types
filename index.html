@@ -9,11 +9,21 @@
   body { background: #0d0d1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
   .app { max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
   h1 { text-align: center; padding: 16px 16px 8px; font-size: 1.2rem; color: #a0a0c0; letter-spacing: 1px; }
-  .lang-toggle { display: flex; justify-content: center; gap: 0; margin-bottom: 8px; }
+  .top-controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .lang-toggle { display: flex; gap: 0; }
   .lang-btn { padding: 4px 14px; border: 1px solid #3a3a6e; background: none; color: #666; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; }
   .lang-btn:first-child { border-radius: 6px 0 0 6px; }
   .lang-btn:last-child { border-radius: 0 6px 6px 0; }
   .lang-btn.active { background: #4040cc; color: #fff; border-color: #4040cc; }
+  .gen-toggle { display: flex; gap: 0; }
+  .gen-label { font-size: 0.72rem; color: #555; line-height: 1; display: flex; align-items: center; padding-right: 4px; }
+  .gen-btn { padding: 4px 7px; border: 1px solid #3a3a6e; background: none; color: #555; cursor: pointer; font-size: 0.72rem; font-weight: 700; transition: all 0.15s; border-left: none; }
+  .gen-btn:first-of-type { border-left: 1px solid #3a3a6e; border-radius: 6px 0 0 6px; }
+  .gen-btn:last-of-type { border-radius: 0 6px 6px 0; }
+  .gen-btn.active { background: #2a4a2a; color: #8f8; border-color: #2a6a2a; }
+  .move-stats { display: flex; gap: 10px; margin: 4px 0 8px; }
+  .move-stat { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; color: #aaa; }
+  .move-stat span { font-weight: 700; color: #fff; margin-left: 4px; }
 
   /* Tabs */
   .tabs { display: flex; border-bottom: 2px solid #2a2a4e; }
@@ -276,9 +286,15 @@
 <body>
 <div class="app">
   <h1>⚔️ Pokémon Type Tool</h1>
-  <div class="lang-toggle">
-    <button class="lang-btn active" id="btnDE" onclick="setLang('de')">🇩🇪 Deutsch</button>
-    <button class="lang-btn" id="btnEN" onclick="setLang('en')">🇬🇧 English</button>
+  <div class="top-controls">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btnDE" onclick="setLang('de')">🇩🇪 DE</button>
+      <button class="lang-btn" id="btnEN" onclick="setLang('en')">🇬🇧 EN</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:0">
+      <span class="gen-label">Gen</span>
+      <div class="gen-toggle" id="genToggle"></div>
+    </div>
   </div>
 
   <div class="tabs">
@@ -549,9 +565,16 @@ function renderEffPanel(idx) {
       ${activeMove !== null && moves[activeMove]?.type ? (() => {
         const mv = moves[activeMove];
         const desc = mv.moveId ? (moveDescCache[mv.moveId]?.[currentLang] || moveDescCache[mv.moveId]?.en || '') : '';
+        const stats = mv.moveId ? getMoveStatsAtGen(mv.moveId) : null;
+        const statsHtml = stats ? `<div class="move-stats">
+          ${stats.power != null ? `<div class="move-stat">${currentLang==='de'?'Stärke':'Power'}<span>${stats.power}</span></div>` : ''}
+          ${stats.accuracy != null ? `<div class="move-stat">${currentLang==='de'?'Genauigkeit':'Accuracy'}<span>${stats.accuracy}%</span></div>` : ''}
+          ${stats.pp != null ? `<div class="move-stat">PP<span>${stats.pp}</span></div>` : ''}
+        </div>` : '';
         return `<div class="move-expand" style="margin-top:8px">
           <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${typeLabel(mv.type)}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
-          ${desc ? `<p style="font-size:0.78rem;color:#bbb;margin:6px 0 10px;line-height:1.5">${desc}</p>` : ''}
+          ${statsHtml}
+          ${desc ? `<p style="font-size:0.78rem;color:#bbb;margin:0 0 10px;line-height:1.5">${desc}</p>` : ''}
           ${renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
         </div>`;
       })() : ''}
@@ -643,7 +666,7 @@ async function selectMoveItem(slotIdx, moveIdx, name, id, display) {
   hideMoveAcEl(slotIdx, moveIdx);
   // Fetch type (with cache)
   let moveType = moveTypeCache[id] || null;
-  if (!moveType || !moveDescCache[id]) {
+  if (!moveType || !moveDescCache[id] || !moveStatCache[id]) {
     try {
       const r = await fetch(`https://pokeapi.co/api/v2/move/${id}`);
       const d = await r.json();
@@ -652,13 +675,14 @@ async function selectMoveItem(slotIdx, moveIdx, name, id, display) {
         moveTypeCache[id] = moveType;
         localStorage.setItem('moveTypes_v1', JSON.stringify(moveTypeCache));
       }
-      // Grab flavor text in DE + EN
       const getDesc = (lang) => {
         const entries = (d.flavor_text_entries || []).filter(e => e.language.name === lang);
         return entries.length ? entries[entries.length - 1].flavor_text.replace(/\n|\f/g, ' ') : null;
       };
       moveDescCache[id] = { de: getDesc('de'), en: getDesc('en') };
       localStorage.setItem('moveDescs_v1', JSON.stringify(moveDescCache));
+      moveStatCache[id] = { power: d.power, accuracy: d.accuracy, pp: d.pp, past_values: d.past_values || [] };
+      localStorage.setItem('moveStats_v1', JSON.stringify(moveStatCache));
     } catch(e) {}
   }
   team[slotIdx].moves[moveIdx] = { name: display, type: moveType, moveId: id };
@@ -1193,6 +1217,51 @@ let moveList = [];
 let moveDE = {};
 let moveTypeCache = JSON.parse(localStorage.getItem('moveTypes_v1') || '{}');
 let moveDescCache = JSON.parse(localStorage.getItem('moveDescs_v1') || '{}');
+let moveStatCache = JSON.parse(localStorage.getItem('moveStats_v1') || '{}'); // {id: {power,accuracy,pp,past_values}}
+let currentGen = 9;
+
+const VG_TO_GEN = {
+  'red-blue':1,'yellow':1,'gold-silver':2,'crystal':2,
+  'ruby-sapphire':3,'firered-leafgreen':3,'emerald':3,
+  'diamond-pearl':4,'platinum':4,'heartgold-soulsilver':4,
+  'black-white':5,'black-2-white-2':5,
+  'x-y':6,'omega-ruby-alpha-sapphire':6,
+  'sun-moon':7,'ultra-sun-ultra-moon':7,
+  'sword-shield':8,'brilliant-diamond-shining-pearl':8,'legends-arceus':8,
+  'scarlet-violet':9
+};
+
+function getMoveStatsAtGen(id) {
+  const d = moveStatCache[id];
+  if (!d) return null;
+  let power = d.power, accuracy = d.accuracy, pp = d.pp;
+  const past = (d.past_values || [])
+    .map(pv => ({ ...pv, g: VG_TO_GEN[pv.version_group?.name] || 9 }))
+    .sort((a,b) => a.g - b.g);
+  for (const pv of past) {
+    if (currentGen <= pv.g) {
+      if (pv.power !== undefined && pv.power !== null) power = pv.power;
+      if (pv.accuracy !== undefined && pv.accuracy !== null) accuracy = pv.accuracy;
+      if (pv.pp !== undefined && pv.pp !== null) pp = pv.pp;
+      break;
+    }
+  }
+  return { power, accuracy, pp };
+}
+
+function buildGenToggle() {
+  const el = document.getElementById('genToggle');
+  if (!el) return;
+  el.innerHTML = [1,2,3,4,5,6,7,8,9].map(g =>
+    `<button class="gen-btn${currentGen===g?' active':''}" onclick="setGen(${g})">${g}</button>`
+  ).join('');
+}
+
+function setGen(g) {
+  currentGen = g;
+  buildGenToggle();
+  if (selectedSlot >= 0) reRenderPanel(selectedSlot);
+}
 let _moveEN = [];
 
 async function loadMoveList() {
@@ -1237,6 +1306,7 @@ function buildMoveList() {
 
 // Init
 currentLang = 'de';
+buildGenToggle();
 loadPokeList();
 loadMoveList();
 renderTeam();
