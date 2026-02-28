@@ -1297,7 +1297,7 @@ function buildGenToggle() {
 function setGen(g) {
   currentGen = g;
   buildGenToggle();
-  if (selectedSlot >= 0) reRenderPanel(selectedSlot);
+  renderTeam();
   renderQsTypes();
   if (qsActive) { qsActive.style.outline = 'none'; qsActive = null; }
   document.getElementById('qsPanel').innerHTML = '';
