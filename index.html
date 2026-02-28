@@ -77,8 +77,18 @@
   .overlay.open { display: flex; }
   .modal { background: #16213e; border-radius: 16px; padding: 20px; width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; }
   .modal h2 { font-size: 1rem; margin-bottom: 14px; }
-  .modal input { width: 100%; background: #1a1a2e; border: 1px solid #3a3a6e; color: #eee; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 12px; }
+  .modal input { width: 100%; background: #1a1a2e; border: 1px solid #3a3a6e; color: #eee; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 4px; }
   .modal input:focus { outline: none; border-color: #6060ff; }
+  .autocomplete-wrap { position: relative; margin-bottom: 12px; }
+  .autocomplete-list { position: absolute; left: 0; right: 0; background: #1e2a4a; border: 1px solid #3a3a6e; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 200; }
+  .ac-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.85rem; }
+  .ac-item:hover, .ac-item.focused { background: #2a3a6e; }
+  .ac-sprite { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+  .ac-name { flex: 1; text-transform: capitalize; }
+  .ac-types { display: flex; gap: 3px; }
+  .ac-loading { padding: 10px; text-align: center; color: #666; font-size: 0.8rem; }
+  .autofill-hint { font-size: 0.7rem; color: #6060cc; margin-bottom: 10px; display: none; }
+  .autofill-hint.visible { display: block; }
   .modal label { font-size: 0.75rem; color: #aaa; display: block; margin-bottom: 4px; }
   .type-select-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
   .type-opt { border: 2px solid transparent; border-radius: 6px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; cursor: pointer; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
@@ -122,7 +132,11 @@
   <div class="modal" onclick="event.stopPropagation()">
     <h2>Pokémon hinzufügen</h2>
     <label>Name</label>
-    <input type="text" id="pokeName" placeholder="z.B. Glurak" maxlength="20">
+    <div class="autocomplete-wrap">
+      <input type="text" id="pokeName" placeholder="z.B. Charizard..." maxlength="30" autocomplete="off" oninput="onNameInput(this.value)" onkeydown="onNameKey(event)">
+      <div class="autocomplete-list" id="acList" style="display:none"></div>
+    </div>
+    <div class="autofill-hint" id="autofillHint">✨ Typen automatisch eingetragen</div>
     <label>Typ 1 *</label>
     <div class="type-select-grid" id="type1Grid"></div>
     <label>Typ 2 (optional)</label>
@@ -457,7 +471,87 @@ function switchTab(tab) {
   document.getElementById('tab-search').classList.toggle('hidden', tab !== 'search');
 }
 
+// ─── PokéAPI Autocomplete ───────────────────────────────────────────────────
+let pokeList = []; // [{name, id}]
+let acFocusIdx = -1;
+
+async function loadPokeList() {
+  const CACHE_KEY = 'pokeList_v1';
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (cached) { pokeList = JSON.parse(cached); return; }
+  try {
+    const r = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025&offset=0');
+    const d = await r.json();
+    pokeList = d.results.map((p, i) => ({ name: p.name, id: i + 1 }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(pokeList));
+  } catch(e) { console.warn('PokéAPI not reachable', e); }
+}
+
+function onNameInput(val) {
+  const hint = document.getElementById('autofillHint');
+  hint.classList.remove('visible');
+  if (val.length < 2) { hideAc(); return; }
+  const q = val.toLowerCase();
+  const matches = pokeList.filter(p => p.name.startsWith(q)).slice(0, 8);
+  if (!matches.length) { hideAc(); return; }
+  acFocusIdx = -1;
+  const list = document.getElementById('acList');
+  list.style.display = 'block';
+  list.innerHTML = matches.map((p, i) => {
+    const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png`;
+    return `<div class="ac-item" data-name="${p.name}" data-id="${p.id}" onmousedown="selectPoke('${p.name}',${p.id})">
+      <img class="ac-sprite" src="${spriteUrl}" onerror="this.style.display='none'">
+      <span class="ac-name">${p.name}</span>
+    </div>`;
+  }).join('');
+}
+
+function onNameKey(e) {
+  const list = document.getElementById('acList');
+  if (list.style.display === 'none') return;
+  const items = list.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { acFocusIdx = Math.min(acFocusIdx + 1, items.length - 1); updateAcFocus(items); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { acFocusIdx = Math.max(acFocusIdx - 1, 0); updateAcFocus(items); e.preventDefault(); }
+  else if (e.key === 'Enter' && acFocusIdx >= 0) {
+    const item = items[acFocusIdx];
+    selectPoke(item.dataset.name, parseInt(item.dataset.id));
+    e.preventDefault();
+  } else if (e.key === 'Escape') { hideAc(); }
+}
+
+function updateAcFocus(items) {
+  items.forEach((el, i) => el.classList.toggle('focused', i === acFocusIdx));
+  if (acFocusIdx >= 0) items[acFocusIdx].scrollIntoView({ block: 'nearest' });
+}
+
+function hideAc() {
+  document.getElementById('acList').style.display = 'none';
+}
+
+async function selectPoke(name, id) {
+  hideAc();
+  // Capitalize display name
+  const displayName = name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  document.getElementById('pokeName').value = displayName;
+
+  // Fetch types from PokeAPI
+  try {
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    const d = await r.json();
+    const types = d.types.sort((a,b) => a.slot - b.slot).map(t => {
+      const n = t.type.name;
+      return n.charAt(0).toUpperCase() + n.slice(1);
+    });
+    sel1 = types[0] || null;
+    sel2 = types[1] || null;
+    updateTypeSelectors();
+    const hint = document.getElementById('autofillHint');
+    hint.classList.add('visible');
+  } catch(e) { console.warn('Could not fetch types', e); }
+}
+
 // Init
+loadPokeList();
 renderTeam();
 renderQsTypes();
 </script>
