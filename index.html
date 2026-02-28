@@ -17,8 +17,22 @@
 
   /* Tabs */
   .tabs { display: flex; border-bottom: 2px solid #2a2a4e; }
-  .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 0.9rem; color: #888; transition: all 0.2s; }
+  .tab { flex: 1; padding: 10px 4px; text-align: center; cursor: pointer; font-size: 0.82rem; color: #888; transition: all 0.2s; }
   .tab.active { color: #fff; border-bottom: 2px solid #6060ff; margin-bottom: -2px; }
+
+  /* Favorites */
+  .fav-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; padding: 12px; }
+  .fav-card { background: #16213e; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s, transform 0.1s; position: relative; overflow: hidden; }
+  .fav-card:hover { border-color: #3a3a6e; transform: scale(1.03); }
+  .fav-card-bg { position: absolute; inset: 0; opacity: 0.15; }
+  .fav-card img { width: 64px; height: 64px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); position: relative; z-index: 1; image-rendering: auto; }
+  .fav-card-name { font-size: 0.72rem; font-weight: 600; text-align: center; position: relative; z-index: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .fav-card-types { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; position: relative; z-index: 1; }
+  .fav-card-del { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.5); border: none; color: #666; font-size: 0.7rem; cursor: pointer; padding: 1px 4px; border-radius: 3px; z-index: 2; line-height: 1.4; }
+  .fav-card-del:hover { color: #f55; }
+  .fav-empty { text-align: center; padding: 40px 20px; color: #444; font-size: 0.85rem; }
+  .fav-add-btn { display: block; margin: 0 12px 12px; padding: 10px; background: #16213e; border: 2px dashed #2a2a4e; border-radius: 12px; color: #555; font-size: 0.85rem; cursor: pointer; text-align: center; width: calc(100% - 24px); }
+  .fav-add-btn:hover { border-color: #4040cc; color: #aaa; }
 
   /* Team Grid */
   .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
@@ -263,6 +277,7 @@
 
   <div class="tabs">
     <div class="tab active" onclick="switchTab('team')">🏆 Team</div>
+    <div class="tab" onclick="switchTab('favs')">⭐ Favoriten</div>
     <div class="tab" onclick="switchTab('search')">🔍 Typ-Suche</div>
   </div>
 
@@ -270,6 +285,12 @@
   <div id="tab-team">
     <div class="team-grid" id="teamGrid"></div>
     <div id="effPanel"></div>
+  </div>
+
+  <!-- Favorites Tab -->
+  <div id="tab-favs" class="hidden">
+    <button class="fav-add-btn" onclick="openFavSearch()">＋ Pokémon zu Favoriten hinzufügen</button>
+    <div class="fav-grid" id="favGrid"></div>
   </div>
 
   <!-- Quick Search Tab -->
@@ -789,9 +810,12 @@ function showQs(type, btn) {
 }
 
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='team')||(i===1&&tab==='search')));
+  const tabs = ['team','favs','search'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', tabs[i] === tab));
   document.getElementById('tab-team').classList.toggle('hidden', tab !== 'team');
+  document.getElementById('tab-favs').classList.toggle('hidden', tab !== 'favs');
   document.getElementById('tab-search').classList.toggle('hidden', tab !== 'search');
+  if (tab === 'favs') renderFavs();
 }
 
 // ─── PokéAPI Autocomplete ───────────────────────────────────────────────────
@@ -868,10 +892,12 @@ function onNameInput(val) {
   list.style.display = 'block';
   list.innerHTML = matches.map((p) => {
     const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png`;
-    const sub = currentLang === 'de' ? `<span style="color:#666;font-size:0.7rem">${capitalize(p.name)}</span>` : '';
+    const sub = currentLang === 'de' ? `<span style="color:#555;font-size:0.7rem">${capitalize(p.name)}</span>` : '';
+    const isFav = favorites.some(f => f.id === p.id);
     return `<div class="ac-item" data-name="${p.name}" data-id="${p.id}" onmousedown="selectPoke('${p.name}',${p.id},'${p.display}')">
       <img class="ac-sprite" src="${spriteUrl}" onerror="this.style.display='none'">
       <span class="ac-name">${p.display} ${sub}</span>
+      <button style="background:none;border:none;font-size:1.1rem;cursor:pointer;padding:2px 4px;opacity:${isFav?1:0.3}" onmousedown="event.stopPropagation();toggleFavFromAc(${p.id},'${p.name}','${p.display}')" title="Zu Favoriten">${isFav?'⭐':'☆'}</button>
     </div>`;
   }).join('');
 }
@@ -917,6 +943,115 @@ async function selectPoke(name, id, display) {
     const hint = document.getElementById('autofillHint');
     hint.classList.add('visible');
   } catch(e) { console.warn('Could not fetch types', e); }
+}
+
+// ─── Favorites ─────────────────────────────────────────────────────────────
+let favorites = JSON.parse(localStorage.getItem('pokeFavs') || '[]');
+function saveFavs() { localStorage.setItem('pokeFavs', JSON.stringify(favorites)); }
+
+function toggleFavFromAc(id, name, display) {
+  const idx = favorites.findIndex(f => f.id === id);
+  if (idx >= 0) {
+    favorites.splice(idx, 1);
+  } else {
+    // Fetch types then add
+    addFav(id, name, display);
+  }
+  saveFavs();
+  // Re-trigger autocomplete display refresh
+  const input = document.getElementById('pokeName');
+  if (input) onNameInput(input.value);
+}
+
+async function addFav(id, name, display) {
+  if (favorites.some(f => f.id === id)) return;
+  let type1 = null, type2 = null;
+  try {
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    const d = await r.json();
+    const types = d.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
+    type1 = types[0]||null; type2 = types[1]||null;
+  } catch(e) {}
+  favorites.push({ id, name, display, type1, type2 });
+  saveFavs();
+  const input = document.getElementById('pokeName');
+  if (input && input.value.length >= 2) onNameInput(input.value);
+  renderFavs();
+}
+
+function renderFavs() {
+  const grid = document.getElementById('favGrid');
+  if (!grid) return;
+  if (!favorites.length) {
+    grid.innerHTML = '<div class="fav-empty">Noch keine Favoriten.<br>Pokémon über die Suche hinzufügen ☆</div>';
+    return;
+  }
+  grid.innerHTML = favorites.map((f,i) => {
+    const artUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${f.id}.png`;
+    const col1 = f.type1 ? TYPE_COLORS[f.type1] : '#3a3a6e';
+    const col2 = f.type2 ? TYPE_COLORS[f.type2] : col1;
+    return `<div class="fav-card" onclick="addFavToTeam(${i})">
+      <div class="fav-card-bg" style="background:linear-gradient(135deg,${col1},${col2})"></div>
+      <button class="fav-card-del" onmousedown="event.stopPropagation();removeFav(${i})">✕</button>
+      <img src="${artUrl}" onerror="this.style.opacity=0.3">
+      <div class="fav-card-name">${f.display}</div>
+      <div class="fav-card-types">
+        ${f.type1?`<span class="badge t-${f.type1}">${f.type1}</span>`:''}
+        ${f.type2?`<span class="badge t-${f.type2}">${f.type2}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removeFav(i) {
+  favorites.splice(i, 1);
+  saveFavs();
+  renderFavs();
+}
+
+function addFavToTeam(favIdx) {
+  const f = favorites[favIdx];
+  // Find first empty team slot
+  const emptySlot = team.findIndex(s => s === null);
+  if (emptySlot < 0) { alert('Team ist voll!'); return; }
+  team[emptySlot] = {
+    name: f.display,
+    type1: f.type1,
+    type2: f.type2,
+    pokeId: f.id,
+    moves: Array(4).fill(null).map(()=>({name:'',type:null}))
+  };
+  saveTeam();
+  switchTab('team');
+  selectedSlot = emptySlot;
+  renderTeam();
+}
+
+function openFavSearch() {
+  // Open modal in "fav add" mode — no slot needed
+  editingSlot = -1;
+  sel1 = null; sel2 = null;
+  selectedPokeId = null;
+  document.getElementById('pokeName').value = '';
+  document.getElementById('autofillHint').classList.remove('visible');
+  document.getElementById('typeOverridePanel').style.display = 'none';
+  buildTypeSelectors();
+  // Override save button to add to favs
+  document.querySelector('#overlay .btn-primary').textContent = 'Zu Favoriten';
+  document.querySelector('#overlay .btn-primary').onclick = saveFavSlot;
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pokeName').focus(), 100);
+}
+
+function saveFavSlot() {
+  if (!selectedPokeId || !sel1) { alert('Bitte ein Pokémon aus der Liste auswählen!'); return; }
+  const name = document.getElementById('pokeName').value.trim() || 'Pokémon';
+  addFav(selectedPokeId, pokeEN.find(p=>p.id===selectedPokeId)?.name||name, name);
+  document.getElementById('overlay').classList.remove('open');
+  // Restore save button
+  document.querySelector('#overlay .btn-primary').textContent = 'Speichern';
+  document.querySelector('#overlay .btn-primary').onclick = saveSlot;
+  renderFavs();
 }
 
 // ─── Move Autocomplete ──────────────────────────────────────────────────────
