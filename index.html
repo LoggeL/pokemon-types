@@ -33,6 +33,12 @@
   .fav-empty { text-align: center; padding: 40px 20px; color: #444; font-size: 0.85rem; }
   .fav-add-btn { display: block; margin: 0 12px 12px; padding: 10px; background: #16213e; border: 2px dashed #2a2a4e; border-radius: 12px; color: #555; font-size: 0.85rem; cursor: pointer; text-align: center; width: calc(100% - 24px); }
   .fav-add-btn:hover { border-color: #4040cc; color: #aaa; }
+  .modal-favs-title { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .modal-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .modal-fav-chip { display: flex; align-items: center; gap: 6px; border-radius: 30px; padding: 4px 10px 4px 4px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; background: rgba(255,255,255,0.05); }
+  .modal-fav-chip:hover { border-color: rgba(255,255,255,0.3); }
+  .modal-fav-chip img { width: 36px; height: 36px; object-fit: contain; image-rendering: pixelated; }
+  .modal-fav-chip-name { font-size: 0.78rem; font-weight: 600; }
 
   /* Team Grid */
   .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
@@ -304,7 +310,8 @@
 <div class="overlay" id="overlay" onclick="closeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <h2>Pokémon hinzufügen</h2>
-    <label>Name</label>
+    <div id="modalFavs"></div>
+    <label>Suche</label>
     <div class="autocomplete-wrap">
       <input type="text" id="pokeName" placeholder="z.B. Charizard..." maxlength="30" autocomplete="off" oninput="onNameInput(this.value)" onkeydown="onNameKey(event)">
       <div class="autocomplete-list" id="acList" style="display:none"></div>
@@ -675,6 +682,7 @@ function openModal(idx) {
   document.getElementById('autofillHint').classList.remove('visible');
   document.getElementById('typeOverridePanel').style.display = 'none';
   buildTypeSelectors();
+  renderModalFavs();
   document.getElementById('overlay').classList.add('open');
   setTimeout(() => document.getElementById('pokeName').focus(), 100);
 }
@@ -977,6 +985,45 @@ async function addFav(id, name, display) {
   const input = document.getElementById('pokeName');
   if (input && input.value.length >= 2) onNameInput(input.value);
   renderFavs();
+}
+
+function renderModalFavs() {
+  const el = document.getElementById('modalFavs');
+  if (!el) return;
+  if (!favorites.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="modal-favs-title">⭐ Favoriten</div>
+    <div class="modal-fav-chips">
+      ${favorites.map(f => {
+        const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${f.id}.png`;
+        return `<div class="modal-fav-chip" onclick="selectFavInModal(${f.id},'${f.name}','${f.display}')">
+          <img src="${spriteUrl}" onerror="this.style.opacity=0.3">
+          <span class="modal-fav-chip-name">${f.display}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function selectFavInModal(id, name, display) {
+  selectedPokeId = id;
+  document.getElementById('pokeName').value = display;
+  hideAc();
+  // Use cached types if fav has them
+  const fav = favorites.find(f => f.id === id);
+  if (fav && fav.type1) {
+    sel1 = fav.type1; sel2 = fav.type2 || null;
+    updateTypeSelectors();
+    document.getElementById('autofillHint').classList.add('visible');
+  } else {
+    // Fetch types
+    try {
+      const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+      const d = await r.json();
+      const types = d.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
+      sel1 = types[0]||null; sel2 = types[1]||null;
+      updateTypeSelectors();
+      document.getElementById('autofillHint').classList.add('visible');
+    } catch(e) {}
+  }
 }
 
 function renderFavs() {
