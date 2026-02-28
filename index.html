@@ -22,15 +22,53 @@
 
   /* Team Grid */
   .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
-  .slot { background: #16213e; border-radius: 12px; padding: 12px; min-height: 80px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; position: relative; display: flex; flex-direction: column; gap: 6px; }
+  .slot {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 10px;
+    min-height: 80px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+  }
   .slot:hover { border-color: #3a3a6e; }
   .slot.active { border-color: #6060ff; }
   .slot.empty { align-items: center; justify-content: center; }
   .slot-add { font-size: 2rem; color: #444; }
-  .slot-name { font-size: 0.85rem; font-weight: 600; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .slot-types { display: flex; gap: 4px; flex-wrap: wrap; }
-  .slot-clear { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #666; font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
-  .slot-clear:hover { color: #f00; background: #2a1a1a; }
+
+  /* Slot artwork & gradient background */
+  .slot-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    border-radius: 10px;
+  }
+  .slot-artwork {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+    image-rendering: auto;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  }
+  .slot-placeholder {
+    font-size: 2.4rem;
+    line-height: 90px;
+    height: 90px;
+    position: relative;
+    z-index: 1;
+  }
+  .slot-name { font-size: 0.8rem; font-weight: 600; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; position: relative; z-index: 1; }
+  .slot-types { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+  .slot-clear { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.5); border: none; color: #aaa; font-size: 0.8rem; cursor: pointer; padding: 2px 5px; border-radius: 4px; z-index: 2; }
+  .slot-clear:hover { color: #f00; background: rgba(60,10,10,0.8); }
 
   /* Type badges */
   .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
@@ -56,8 +94,11 @@
   .t-Fairy    { background: #EE99AC; color: #333; text-shadow: none; }
 
   /* Effectiveness panel */
-  .eff-panel { margin: 4px 12px; background: #16213e; border-radius: 12px; padding: 12px; }
-  .eff-panel h3 { font-size: 0.85rem; color: #aaa; margin-bottom: 8px; }
+  .eff-panel { margin: 4px 12px; background: #16213e; border-radius: 12px; padding: 14px; }
+  .eff-panel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .eff-header-artwork { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
+  .eff-header-placeholder { font-size: 2rem; width: 72px; text-align: center; }
+  .eff-header-info h3 { font-size: 0.95rem; margin-bottom: 6px; }
   .eff-section { margin-bottom: 12px; }
   .eff-section-title { font-size: 0.75rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
   .eff-group { margin-bottom: 8px; }
@@ -68,6 +109,26 @@
   .lbl-025x{ background: #0a4480; color: #fff; }
   .lbl-0x  { background: #444; color: #ccc; }
   .eff-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* Moves panel */
+  .moves-panel { margin-bottom: 4px; }
+  .moves-panel-title { font-size: 0.75rem; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .move-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .move-chip {
+    border: none;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .move-chip:active { transform: scale(0.95); }
+  .move-chip.active-move { box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0,0,0,0.5); }
+  .move-chip-gray { background: #3a3a5e; color: #666; cursor: default; }
+  .move-expand { background: #0e1628; border-radius: 10px; padding: 10px; margin-top: 6px; }
+  .move-expand-title { font-size: 0.72rem; color: #aaa; margin-bottom: 6px; }
 
   /* Quick search tab */
   .type-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; }
@@ -80,10 +141,10 @@
   /* Modal */
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
   .overlay.open { display: flex; }
-  .modal { background: #16213e; border-radius: 16px; padding: 20px; width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; }
+  .modal { background: #16213e; border-radius: 16px; padding: 20px; width: 90%; max-width: 380px; max-height: 92vh; overflow-y: auto; }
   .modal h2 { font-size: 1rem; margin-bottom: 14px; }
-  .modal input { width: 100%; background: #1a1a2e; border: 1px solid #3a3a6e; color: #eee; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 4px; }
-  .modal input:focus { outline: none; border-color: #6060ff; }
+  .modal input[type=text] { width: 100%; background: #1a1a2e; border: 1px solid #3a3a6e; color: #eee; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 4px; }
+  .modal input[type=text]:focus { outline: none; border-color: #6060ff; }
   .autocomplete-wrap { position: relative; margin-bottom: 12px; }
   .autocomplete-list { position: absolute; left: 0; right: 0; background: #1e2a4a; border: 1px solid #3a3a6e; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 200; }
   .ac-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.85rem; }
@@ -106,6 +167,37 @@
   .btn-primary { background: #4040cc; color: #fff; }
   .btn-secondary { background: #2a2a4e; color: #aaa; }
   .btn:active { opacity: 0.8; }
+
+  /* Moves section in modal */
+  .moves-section { margin-bottom: 14px; }
+  .moves-section-title { font-size: 0.8rem; color: #aaa; margin-bottom: 10px; font-weight: 600; }
+  .move-input-row { background: #1a1a2e; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+  .move-input-row label { font-size: 0.7rem; color: #888; margin-bottom: 5px; display: block; }
+  .move-input-row input[type=text] { margin-bottom: 8px; }
+  .move-type-mini-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .move-type-btn {
+    border: 2px solid transparent;
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    transition: border-color 0.1s;
+  }
+  .move-type-btn.light-type { color: #333; text-shadow: none; }
+  .move-type-btn.selected { border-color: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.4); }
+  .move-type-none-btn {
+    border: 2px solid #3a3a6e;
+    background: #2a2a4e;
+    color: #aaa;
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 0.65rem;
+    cursor: pointer;
+  }
+  .move-type-none-btn.selected { border-color: #fff; color: #fff; }
 
   .hidden { display: none; }
 </style>
@@ -150,6 +242,13 @@
     <div class="type-select-grid" id="type1Grid"></div>
     <label>Typ 2 (optional)</label>
     <div class="type-select-grid" id="type2Grid"></div>
+
+    <!-- Moves section -->
+    <div class="moves-section">
+      <div class="moves-section-title">⚔️ Attacken (optional)</div>
+      <div id="movesInputs"></div>
+    </div>
+
     <div class="modal-btns">
       <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveSlot()">Speichern</button>
@@ -194,9 +293,18 @@ const CHART = {
 // State
 let team = JSON.parse(localStorage.getItem('pokeTeam') || '[null,null,null,null,null,null]');
 if (!Array.isArray(team) || team.length !== 6) team = Array(6).fill(null);
+
+// Migrate old slots without moves/pokeId
+team = team.map(p => p ? { name: p.name, type1: p.type1, type2: p.type2 || null, pokeId: p.pokeId || null, moves: p.moves || [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}] } : null);
+
 let editingSlot = -1;
 let selectedSlot = -1;
 let sel1 = null, sel2 = null;
+let selectedPokeId = null;
+let activeMove = null; // index of expanded move in panel
+
+// Move type selections in modal [null, null, null, null]
+let moveSels = [null, null, null, null];
 
 function saveTeam() { localStorage.setItem('pokeTeam', JSON.stringify(team)); }
 
@@ -207,7 +315,7 @@ function typeBadge(t) {
 function typeStyle(t) {
   const color = TYPE_COLORS[t];
   const textColor = LIGHT_TYPES.has(t) ? '#333' : '#fff';
-  return `background:${color};color:${textColor}`;
+  return `background:${color};color:${textColor};text-shadow:${LIGHT_TYPES.has(t)?'none':'0 1px 2px rgba(0,0,0,0.5)'}`;
 }
 
 // Effectiveness calculation
@@ -232,25 +340,21 @@ function calcAttack(type1, type2) {
     const m1 = CHART[type1]?.[def] ?? 1;
     const m2 = type2 ? (CHART[type2]?.[def] ?? 1) : 1;
     const best = Math.max(m1, m2);
-    // Only show notable results
-    if (best === 2) groups[2].push(def);
-    else if (best === 0) {
-      // Both are immune or 0
-      const min = Math.min(m1, m2);
-      if (min === 0) groups[0].push(def);
-      else if (best < 1) groups[0.5].push(def);
-    } else if (best < 1) groups[0.5].push(def);
-  }
-  // For 0x: only if best possible is 0 (both immune or one immune and other is not super effective)
-  // Re-do properly:
-  groups[2] = []; groups[0.5] = []; groups[0] = [];
-  for (const def of TYPES) {
-    const m1 = CHART[type1]?.[def] ?? 1;
-    const m2 = type2 ? (CHART[type2]?.[def] ?? 1) : 1;
-    const best = Math.max(m1, m2);
     if (best >= 2) groups[2].push(def);
     else if (best === 0) groups[0].push(def);
     else if (best < 1) groups[0.5].push(def);
+  }
+  return groups;
+}
+
+function calcMoveOffense(moveType) {
+  // Offensive effectiveness of a single move type
+  const groups = { 2:[], 0.5:[], 0:[] };
+  for (const def of TYPES) {
+    const m = CHART[moveType]?.[def] ?? 1;
+    if (m >= 2) groups[2].push(def);
+    else if (m === 0) groups[0].push(def);
+    else if (m < 1) groups[0.5].push(def);
   }
   return groups;
 }
@@ -288,8 +392,59 @@ function renderEffPanel(idx) {
     [0, '0×', 'lbl-0x'],
   ];
 
+  // Artwork header
+  let artworkHtml = '';
+  if (p.pokeId) {
+    const artUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.pokeId}.png`;
+    artworkHtml = `<img class="eff-header-artwork" src="${artUrl}" alt="${p.name}" onerror="this.style.display='none'">`;
+  } else {
+    artworkHtml = `<div class="eff-header-placeholder">⚪</div>`;
+  }
+
+  // Moves panel
+  const moves = p.moves || [];
+  const validMoves = moves.filter(m => m.name || m.type);
+  let movesHtml = '';
+  if (validMoves.length > 0) {
+    movesHtml = `<div class="eff-section moves-panel">
+      <div class="eff-section-title">⚔️ Attacken</div>
+      <div class="move-buttons">`;
+    for (let i = 0; i < moves.length; i++) {
+      const mv = moves[i];
+      if (!mv || (!mv.name && !mv.type)) continue;
+      const isActive = activeMove === i;
+      if (mv.type) {
+        const col = TYPE_COLORS[mv.type];
+        const txt = LIGHT_TYPES.has(mv.type) ? '#333' : '#fff';
+        const tsh = LIGHT_TYPES.has(mv.type) ? 'none' : '0 1px 2px rgba(0,0,0,0.5)';
+        movesHtml += `<button class="move-chip${isActive?' active-move':''}" style="background:${col};color:${txt};text-shadow:${tsh}" onclick="toggleMove(${idx},${i})">${mv.name || mv.type}</button>`;
+      } else {
+        movesHtml += `<button class="move-chip move-chip-gray" disabled>${mv.name || '—'}</button>`;
+      }
+    }
+    movesHtml += `</div>`;
+
+    // Expanded move effectiveness
+    if (activeMove !== null && moves[activeMove] && moves[activeMove].type) {
+      const mv = moves[activeMove];
+      const mGroups = calcMoveOffense(mv.type);
+      movesHtml += `<div class="move-expand">
+        <div class="move-expand-title">Effektivität: <span class="badge t-${mv.type}">${mv.type}</span> ${mv.name ? `— ${mv.name}` : ''}</div>
+        ${renderEffGroups(mGroups, [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
+      </div>`;
+    }
+
+    movesHtml += `</div>`;
+  }
+
   return `<div class="eff-panel">
-    <h3>${p.name} — ${typeBadge(p.type1)}${p.type2 ? ' ' + typeBadge(p.type2) : ''}</h3>
+    <div class="eff-panel-header">
+      ${artworkHtml}
+      <div class="eff-header-info">
+        <h3>${p.name}</h3>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">${typeBadge(p.type1)}${p.type2 ? typeBadge(p.type2) : ''}</div>
+      </div>
+    </div>
     <div class="eff-section">
       <div class="eff-section-title">🛡️ Verteidigung (wird getroffen von…)</div>
       ${renderEffGroups(def, defLabels)}
@@ -298,7 +453,18 @@ function renderEffPanel(idx) {
       <div class="eff-section-title">🗡️ Angriff (trifft … effektiv)</div>
       ${renderEffGroups(atk, atkLabels)}
     </div>
+    ${movesHtml}
   </div>`;
+}
+
+function toggleMove(slotIdx, moveIdx) {
+  if (activeMove === moveIdx) {
+    activeMove = null;
+  } else {
+    activeMove = moveIdx;
+  }
+  const effPanel = document.getElementById('effPanel');
+  effPanel.innerHTML = renderEffPanel(slotIdx);
 }
 
 function renderTeam() {
@@ -308,12 +474,21 @@ function renderTeam() {
     const p = team[i];
     const div = document.createElement('div');
     div.className = 'slot' + (!p ? ' empty' : '') + (selectedSlot === i ? ' active' : '');
+
     if (p) {
+      // Background gradient from type color
+      const col1 = TYPE_COLORS[p.type1] || '#3a3a6e';
+      const col2 = p.type2 ? TYPE_COLORS[p.type2] : col1;
       div.innerHTML = `
+        <div class="slot-bg" style="background:linear-gradient(135deg,${col1},${col2})"></div>
         <button class="slot-clear" onclick="clearSlot(event,${i})">✕</button>
+        ${p.pokeId
+          ? `<img class="slot-artwork" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.pokeId}.png" alt="${p.name}" onerror="this.outerHTML='<div class=slot-placeholder>⚪</div>'">`
+          : `<div class="slot-placeholder">⚪</div>`
+        }
         <div class="slot-name">${p.name}</div>
         <div class="slot-types">${typeBadge(p.type1)}${p.type2 ? typeBadge(p.type2) : ''}</div>`;
-      div.onclick = () => selectSlot(i);
+      div.onclick = (e) => { if (!e.target.classList.contains('slot-clear')) selectSlot(i); };
     } else {
       div.innerHTML = `<div class="slot-add">＋</div>`;
       div.onclick = () => openModal(i);
@@ -330,6 +505,7 @@ function renderTeam() {
 }
 
 function selectSlot(i) {
+  if (selectedSlot !== i) activeMove = null;
   selectedSlot = (selectedSlot === i) ? -1 : i;
   renderTeam();
 }
@@ -337,7 +513,7 @@ function selectSlot(i) {
 function clearSlot(e, i) {
   e.stopPropagation();
   team[i] = null;
-  if (selectedSlot === i) selectedSlot = -1;
+  if (selectedSlot === i) { selectedSlot = -1; activeMove = null; }
   saveTeam();
   renderTeam();
 }
@@ -346,8 +522,12 @@ function clearSlot(e, i) {
 function openModal(idx) {
   editingSlot = idx;
   sel1 = null; sel2 = null;
+  selectedPokeId = null;
+  moveSels = [null, null, null, null];
   document.getElementById('pokeName').value = '';
+  document.getElementById('autofillHint').classList.remove('visible');
   buildTypeSelectors();
+  buildMovesInputs();
   document.getElementById('overlay').classList.add('open');
   setTimeout(() => document.getElementById('pokeName').focus(), 100);
 }
@@ -355,6 +535,7 @@ function openModal(idx) {
 function closeModal(e) {
   if (!e || e.target === document.getElementById('overlay')) {
     document.getElementById('overlay').classList.remove('open');
+    hideAc();
   }
 }
 
@@ -380,7 +561,6 @@ function buildTypeSelectors() {
     g2.appendChild(b2);
   }
 
-  // None option for type2
   const none = document.createElement('button');
   none.className = 'type-opt-none selected';
   none.textContent = '—';
@@ -412,12 +592,80 @@ function updateTypeSelectors() {
   }
 }
 
+function buildMovesInputs() {
+  const container = document.getElementById('movesInputs');
+  container.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const row = document.createElement('div');
+    row.className = 'move-input-row';
+    row.innerHTML = `<label>Attacke ${i+1}</label>
+      <input type="text" id="moveName${i}" placeholder="Name (optional)" maxlength="30">
+      <div class="move-type-mini-grid" id="moveTypeGrid${i}"></div>`;
+    container.appendChild(row);
+    buildMoveTypeGrid(i);
+  }
+}
+
+function buildMoveTypeGrid(moveIdx) {
+  const grid = document.getElementById(`moveTypeGrid${moveIdx}`);
+  grid.innerHTML = '';
+
+  // None button
+  const noneBtn = document.createElement('button');
+  noneBtn.className = 'move-type-none-btn selected';
+  noneBtn.textContent = '—';
+  noneBtn.onclick = () => { moveSels[moveIdx] = null; updateMoveTypeGrid(moveIdx); };
+  noneBtn.id = `moveTypeNone${moveIdx}`;
+  grid.appendChild(noneBtn);
+
+  for (const t of TYPES) {
+    const b = document.createElement('button');
+    b.className = 'move-type-btn' + (LIGHT_TYPES.has(t) ? ' light-type' : '');
+    b.textContent = t;
+    b.style.cssText = `background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'};border:2px solid transparent`;
+    b.dataset.type = t;
+    b.onclick = () => { moveSels[moveIdx] = t; updateMoveTypeGrid(moveIdx); };
+    grid.appendChild(b);
+  }
+  updateMoveTypeGrid(moveIdx);
+}
+
+function updateMoveTypeGrid(moveIdx) {
+  const grid = document.getElementById(`moveTypeGrid${moveIdx}`);
+  const none = document.getElementById(`moveTypeNone${moveIdx}`);
+  const sel = moveSels[moveIdx];
+  if (none) {
+    none.style.borderColor = sel === null ? '#fff' : '#3a3a6e';
+    none.style.color = sel === null ? '#fff' : '#aaa';
+  }
+  grid.querySelectorAll('.move-type-btn').forEach(b => {
+    const t = b.dataset.type;
+    b.style.borderColor = sel === t ? '#fff' : 'transparent';
+    b.style.boxShadow = sel === t ? '0 0 5px rgba(255,255,255,0.4)' : 'none';
+  });
+}
+
 function saveSlot() {
   const name = document.getElementById('pokeName').value.trim() || 'Pokémon';
   if (!sel1) { alert('Bitte Typ 1 auswählen!'); return; }
-  team[editingSlot] = { name, type1: sel1, type2: sel2 || null };
+
+  const moves = [];
+  for (let i = 0; i < 4; i++) {
+    const mvName = (document.getElementById(`moveName${i}`)?.value || '').trim();
+    const mvType = moveSels[i] || null;
+    moves.push({ name: mvName, type: mvType });
+  }
+
+  team[editingSlot] = {
+    name,
+    type1: sel1,
+    type2: sel2 || null,
+    pokeId: selectedPokeId || null,
+    moves
+  };
   saveTeam();
   selectedSlot = editingSlot;
+  activeMove = null;
   document.getElementById('overlay').classList.remove('open');
   renderTeam();
 }
@@ -442,14 +690,12 @@ function showQs(type, btn) {
   btn.style.outline = '2px solid #fff';
   qsActive = btn;
 
-  // Defense for single type
   const defGroups = {};
   for (const atk of TYPES) {
     const m = CHART[atk]?.[type] ?? 1;
     if (!defGroups[m]) defGroups[m] = [];
     defGroups[m].push(atk);
   }
-  // Attack for single type
   const atkGroups = {};
   for (const def of TYPES) {
     const m = CHART[type]?.[def] ?? 1;
@@ -481,14 +727,13 @@ function switchTab(tab) {
 }
 
 // ─── PokéAPI Autocomplete ───────────────────────────────────────────────────
-let pokeList = []; // [{name, id}] — active language
-let pokeEN = [];   // [{name, id}] — English (canonical)
-let pokeDE = {};   // {id -> deName}
+let pokeList = [];
+let pokeEN = [];
+let pokeDE = {};
 let currentLang = 'de';
 let acFocusIdx = -1;
 
 async function loadPokeList() {
-  // Load English list
   const EN_KEY = 'pokeList_v1';
   const cachedEN = localStorage.getItem(EN_KEY);
   if (cachedEN) {
@@ -502,7 +747,6 @@ async function loadPokeList() {
     } catch(e) { console.warn('PokéAPI EN not reachable', e); }
   }
 
-  // Load German names via GraphQL
   const DE_KEY = 'pokeDE_v1';
   const cachedDE = localStorage.getItem(DE_KEY);
   if (cachedDE) {
@@ -547,7 +791,6 @@ function onNameInput(val) {
   hint.classList.remove('visible');
   if (val.length < 2) { hideAc(); return; }
   const q = val.toLowerCase();
-  // Search display name (active lang) and English name
   const matches = pokeList.filter(p =>
     p.display.toLowerCase().startsWith(q) || p.name.startsWith(q)
   ).slice(0, 8);
@@ -584,14 +827,15 @@ function updateAcFocus(items) {
 }
 
 function hideAc() {
-  document.getElementById('acList').style.display = 'none';
+  const el = document.getElementById('acList');
+  if (el) el.style.display = 'none';
 }
 
 async function selectPoke(name, id, display) {
   hideAc();
+  selectedPokeId = id;
   document.getElementById('pokeName').value = display || capitalize(name);
 
-  // Fetch types from PokeAPI
   try {
     const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const d = await r.json();
@@ -607,7 +851,7 @@ async function selectPoke(name, id, display) {
   } catch(e) { console.warn('Could not fetch types', e); }
 }
 
-// Init — start with DE as default
+// Init
 currentLang = 'de';
 loadPokeList();
 renderTeam();
