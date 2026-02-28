@@ -94,15 +94,66 @@
   .t-Fairy    { background: #EE99AC; color: #333; text-shadow: none; }
 
   /* Effectiveness panel */
-  .eff-panel { margin: 4px 12px; background: #16213e; border-radius: 12px; padding: 14px; }
-  .eff-panel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .eff-header-artwork { width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); }
-  .eff-header-placeholder { font-size: 2rem; width: 72px; text-align: center; }
-  .eff-header-info h3 { font-size: 0.95rem; margin-bottom: 6px; }
-  .eff-section { margin-bottom: 12px; }
-  .eff-section-title { font-size: 0.75rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .eff-group { margin-bottom: 8px; }
-  .eff-group-label { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; }
+  .eff-panel { margin: 4px 12px 12px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+  .eff-panel-header {
+    display: flex; align-items: flex-end; gap: 0;
+    padding: 16px 16px 12px;
+    position: relative; overflow: hidden;
+  }
+  .eff-header-bg { position: absolute; inset: 0; opacity: 0.25; }
+  .eff-header-artwork {
+    width: 100px; height: 100px; object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7));
+    position: relative; z-index: 1; flex-shrink: 0;
+  }
+  .eff-header-placeholder { font-size: 3rem; width: 100px; text-align: center; position: relative; z-index: 1; }
+  .eff-header-info { flex: 1; padding-left: 12px; position: relative; z-index: 1; }
+  .eff-header-info h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+  .eff-header-types { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  /* Move grid (2×2) */
+  .moves-strip { background: rgba(0,0,0,0.3); padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .moves-strip-title { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .move-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .move-card { background: rgba(255,255,255,0.04); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+  .move-card-type-bar { height: 3px; }
+  .move-card-body { padding: 6px 8px; display: flex; align-items: center; gap: 6px; }
+  .move-card-input { flex: 1; background: none; border: none; color: #ddd; font-size: 0.78rem; min-width: 0; padding: 0; }
+  .move-card-input:focus { outline: none; color: #fff; }
+  .move-card-input::placeholder { color: #444; }
+  .move-type-badge-sm { font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; white-space: nowrap; cursor: pointer; border: none; flex-shrink: 0; }
+  .move-type-badge-empty { background: #2a2a4e; color: #555; }
+  .move-picker { background: #0e1628; padding: 8px; display: flex; flex-wrap: wrap; gap: 4px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .move-picker-opt { border: 2px solid transparent; border-radius: 5px; padding: 3px 8px; font-size: 0.66rem; font-weight: 700; cursor: pointer; }
+  .move-picker-none { border: 2px solid #3a3a6e; background: #2a2a4e; color: #aaa; border-radius: 5px; padding: 3px 8px; font-size: 0.66rem; cursor: pointer; }
+  .move-ac-list { position: absolute; left: 0; right: 0; top: 100%; background: #1e2a4a; border: 1px solid #3a3a6e; border-radius: 0 0 8px 8px; max-height: 140px; overflow-y: auto; z-index: 300; }
+  .move-ac-item { padding: 5px 10px; cursor: pointer; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
+  .move-ac-item:hover, .move-ac-item.focused { background: #2a3a6e; }
+
+  /* Effectiveness sections */
+  .eff-body { background: #16213e; padding: 12px; }
+  .eff-section { margin-bottom: 14px; }
+  .eff-section-title { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .eff-cards { display: flex; flex-wrap: wrap; gap: 6px; }
+  .eff-card {
+    border-radius: 10px; overflow: hidden; flex: 0 0 auto;
+    min-width: 60px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .eff-card-header {
+    padding: 3px 8px; font-size: 0.7rem; font-weight: 800;
+    text-align: center; letter-spacing: 0.5px;
+  }
+  .eff-card-body { padding: 6px 6px; display: flex; flex-wrap: wrap; gap: 3px; background: rgba(0,0,0,0.25); }
+  .ec-4x .eff-card-header  { background: #8b0000; color: #fff; }
+  .ec-2x .eff-card-header  { background: #b84000; color: #fff; }
+  .ec-05x .eff-card-header { background: #145214; color: #fff; }
+  .ec-025x .eff-card-header{ background: #0a3060; color: #fff; }
+  .ec-0x .eff-card-header  { background: #333; color: #aaa; }
+
+  /* Move expand */
+  .move-expand { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px; margin-top: 6px; }
+  .move-expand-title { font-size: 0.72rem; color: #aaa; margin-bottom: 6px; }
+
   .lbl-4x  { background: #8b0000; color: #fff; }
   .lbl-2x  { background: #d4500a; color: #fff; }
   .lbl-05x { background: #1a6b1a; color: #fff; }
@@ -349,17 +400,20 @@ function calcMoveOffense(moveType) {
 }
 
 function renderEffGroups(groups, labels) {
-  let html = '';
+  let html = '<div class="eff-cards">';
+  let any = false;
   for (const [mult, label, cls] of labels) {
     const types = groups[mult];
     if (types && types.length > 0) {
-      html += `<div class="eff-group">
-        <span class="eff-group-label ${cls}">${label}</span>
-        <div class="eff-badges">${types.map(t => `<span class="badge t-${t}">${t}</span>`).join('')}</div>
+      any = true;
+      html += `<div class="eff-card ${cls.replace('lbl-','ec-')}">
+        <div class="eff-card-header">${label}</div>
+        <div class="eff-card-body">${types.map(t => `<span class="badge t-${t}">${t}</span>`).join('')}</div>
       </div>`;
     }
   }
-  return html || '<span style="color:#666;font-size:0.75rem">–</span>';
+  html += '</div>';
+  return any ? html : '<span style="color:#555;font-size:0.75rem">–</span>';
 }
 
 function renderEffPanel(idx) {
@@ -367,87 +421,77 @@ function renderEffPanel(idx) {
   if (!p) return '';
   const def = calcDefense(p.type1, p.type2);
   const atk = calcAttack(p.type1, p.type2);
+  const defLabels = [[4,'4×','lbl-4x'],[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0.25,'¼×','lbl-025x'],[0,'0×','lbl-0x']];
+  const atkLabels = [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']];
 
-  const defLabels = [
-    [4, '4×', 'lbl-4x'],
-    [2, '2×', 'lbl-2x'],
-    [0.5, '½×', 'lbl-05x'],
-    [0.25, '¼×', 'lbl-025x'],
-    [0, '0×', 'lbl-0x'],
-  ];
-  const atkLabels = [
-    [2, '2×', 'lbl-2x'],
-    [0.5, '½×', 'lbl-05x'],
-    [0, '0×', 'lbl-0x'],
-  ];
+  // Header background gradient
+  const col1 = TYPE_COLORS[p.type1];
+  const col2 = p.type2 ? TYPE_COLORS[p.type2] : col1;
+  const artUrl = p.pokeId
+    ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.pokeId}.png`
+    : null;
+  const artHtml = artUrl
+    ? `<img class="eff-header-artwork" src="${artUrl}" alt="${p.name}" onerror="this.style.display='none'">`
+    : `<div class="eff-header-placeholder">⚪</div>`;
 
-  // Artwork header
-  let artworkHtml = '';
-  if (p.pokeId) {
-    const artUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.pokeId}.png`;
-    artworkHtml = `<img class="eff-header-artwork" src="${artUrl}" alt="${p.name}" onerror="this.style.display='none'">`;
-  } else {
-    artworkHtml = `<div class="eff-header-placeholder">⚪</div>`;
-  }
-
-  // Inline move editor
-  const moves = p.moves || [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}];
-  let movesHtml = `<div class="eff-section">
-    <div class="eff-section-title">⚔️ Attacken</div>`;
+  // Move grid
+  const moves = p.moves || Array(4).fill(null).map(()=>({name:'',type:null}));
+  let moveGridHtml = '';
   for (let i = 0; i < 4; i++) {
     const mv = moves[i] || {name:'',type:null};
-    const typeBtn = mv.type
-      ? `<button class="move-type-btn" style="${typeStyle(mv.type)}" onclick="toggleMovePicker(${idx},${i})">${mv.type}</button>`
-      : `<button class="move-type-btn move-type-btn-empty" onclick="toggleMovePicker(${idx},${i})">Typ?</button>`;
-    movesHtml += `<div class="move-row">
-      <div class="move-input-wrap">
-        <input type="text" value="${mv.name||''}" placeholder="Attacke ${i+1}…" 
-          oninput="onMoveInput(${idx},${i},this.value)"
-          onkeydown="onMoveKey(event,${idx},${i})"
-          onblur="hideMoveAc(${i})"
-          id="moveIn${idx}_${i}">
-        <div class="move-ac-list" id="moveAc${idx}_${i}" style="display:none"></div>
+    const barColor = mv.type ? TYPE_COLORS[mv.type] : 'transparent';
+    const typeBtnHtml = mv.type
+      ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMovePicker(${idx},${i})">${mv.type}</button>`
+      : `<button class="move-type-badge-sm move-type-badge-empty" onmousedown="toggleMovePicker(${idx},${i})">?</button>`;
+    moveGridHtml += `<div>
+      <div class="move-card${activeMove===i?' active-move':''}">
+        <div class="move-card-type-bar" style="background:${barColor}"></div>
+        <div class="move-card-body" style="position:relative">
+          <div class="move-input-wrap" style="position:relative;flex:1">
+            <input class="move-card-input" type="text" value="${mv.name||''}" placeholder="Attacke ${i+1}…"
+              oninput="onMoveInput(${idx},${i},this.value)"
+              onkeydown="onMoveKey(event,${idx},${i})"
+              onblur="hideMoveAc(${i})"
+              id="moveIn${idx}_${i}">
+            <div class="move-ac-list" id="moveAc${idx}_${i}" style="display:none"></div>
+          </div>
+          ${typeBtnHtml}
+        </div>
       </div>
-      ${typeBtn}
+      ${openPicker===i ? `<div class="move-picker">
+        <button class="move-picker-none" onmousedown="setMoveType(${idx},${i},null)">—</button>
+        ${TYPES.map(t=>`<button class="move-picker-opt" style="background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'};border-color:${mv.type===t?'#fff':'transparent'}" onmousedown="setMoveType(${idx},${i},'${t}')">${t}</button>`).join('')}
+      </div>` : ''}
+      ${activeMove===i && mv.type ? `<div class="move-expand">
+        <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${mv.type}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
+        ${renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
+      </div>` : ''}
     </div>`;
-    // Type picker
-    if (openPicker === i) {
-      movesHtml += `<div class="move-picker" id="picker${i}">
-        <button class="move-picker-none" onmousedown="setMoveType(${idx},${i},null)">—</button>`;
-      for (const t of TYPES) {
-        const light = LIGHT_TYPES.has(t);
-        movesHtml += `<button class="move-picker-opt" style="background:${TYPE_COLORS[t]};color:${light?'#333':'#fff'};border-color:${mv.type===t?'#fff':'transparent'}" onmousedown="setMoveType(${idx},${i},'${t}')">${t}</button>`;
-      }
-      movesHtml += `</div>`;
-    }
-    // Expanded effectiveness
-    if (activeMove === i && mv.type) {
-      const mGroups = calcMoveOffense(mv.type);
-      movesHtml += `<div class="move-expand">
-        <div class="move-expand-title">Effektivität: <span class="badge t-${mv.type}">${mv.type}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
-        ${renderEffGroups(mGroups, [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
-      </div>`;
-    }
   }
-  movesHtml += `</div>`;
 
   return `<div class="eff-panel">
-    <div class="eff-panel-header">
-      ${artworkHtml}
+    <div class="eff-panel-header" style="background:linear-gradient(135deg,${col1}33,${col2}44)">
+      <div class="eff-header-bg" style="background:linear-gradient(135deg,${col1},${col2})"></div>
+      ${artHtml}
       <div class="eff-header-info">
         <h3>${p.name}</h3>
-        <div style="display:flex;gap:4px;flex-wrap:wrap">${typeBadge(p.type1)}${p.type2 ? typeBadge(p.type2) : ''}</div>
+        <div class="eff-header-types">${typeBadge(p.type1)}${p.type2?typeBadge(p.type2):''}</div>
       </div>
     </div>
-    <div class="eff-section">
-      <div class="eff-section-title">🛡️ Verteidigung (wird getroffen von…)</div>
-      ${renderEffGroups(def, defLabels)}
+    <div class="moves-strip">
+      <div class="moves-strip-title">⚔️ Attacken</div>
+      <div class="move-grid">${moveGridHtml}</div>
     </div>
-    <div class="eff-section">
-      <div class="eff-section-title">🗡️ Angriff (trifft … effektiv)</div>
-      ${renderEffGroups(atk, atkLabels)}
+    <div class="eff-body">
+      <div class="eff-section">
+        <div class="eff-section-title">🛡️ Verteidigung — getroffen von</div>
+        ${renderEffGroups(def, defLabels)}
+      </div>
+      <div class="eff-section">
+        <div class="eff-section-title">🗡️ Angriff — trifft effektiv</div>
+        ${renderEffGroups(atk, atkLabels)}
+      </div>
     </div>
-    ${movesHtml}
   </div>`;
 }
 
