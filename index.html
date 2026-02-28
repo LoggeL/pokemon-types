@@ -282,9 +282,9 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('team')">🏆 Team</div>
-    <div class="tab" onclick="switchTab('favs')">⭐ Favoriten</div>
-    <div class="tab" onclick="switchTab('search')">🔍 Typ-Suche</div>
+    <div class="tab active" onclick="switchTab('team')" id="tab-btn-team">🏆 Team</div>
+    <div class="tab" onclick="switchTab('favs')" id="tab-btn-favs">⭐ Favoriten</div>
+    <div class="tab" onclick="switchTab('search')" id="tab-btn-search">🔍 Typ-Suche</div>
   </div>
 
   <!-- Team Tab -->
@@ -335,6 +335,42 @@
 <script>
 const TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
 
+const TYPE_DE = {
+  Normal:'Normal', Fire:'Feuer', Water:'Wasser', Electric:'Elektro',
+  Grass:'Pflanze', Ice:'Eis', Fighting:'Kampf', Poison:'Gift',
+  Ground:'Boden', Flying:'Flug', Psychic:'Psycho', Bug:'Käfer',
+  Rock:'Gestein', Ghost:'Geist', Dragon:'Drache', Dark:'Unlicht',
+  Steel:'Stahl', Fairy:'Fee'
+};
+
+const UI_STRINGS = {
+  de: {
+    tab_team: '🏆 Team', tab_favs: '⭐ Favoriten', tab_search: '🔍 Typ-Suche',
+    defense: '🛡️ Verteidigung — getroffen von',
+    attack_move: '⚡ Attacke — trifft effektiv',
+    moves: '⚔️ Attacken',
+    add_pokemon: 'Pokémon hinzufügen',
+    search_placeholder: 'z.B. Glumanda…',
+    move_placeholder: 'Attacke',
+    team_full: 'Team ist voll!',
+    select_pokemon: 'Bitte ein Pokémon aus der Liste auswählen!',
+  },
+  en: {
+    tab_team: '🏆 Team', tab_favs: '⭐ Favorites', tab_search: '🔍 Type Search',
+    defense: '🛡️ Defense — hit by',
+    attack_move: '⚡ Move — hits effectively',
+    moves: '⚔️ Moves',
+    add_pokemon: 'Add Pokémon',
+    search_placeholder: 'e.g. Charmander…',
+    move_placeholder: 'Move',
+    team_full: 'Team is full!',
+    select_pokemon: 'Please select a Pokémon from the list!',
+  }
+};
+
+function t(key) { return (UI_STRINGS[currentLang] || UI_STRINGS.de)[key] || key; }
+function typeLabel(type) { return currentLang === 'de' ? (TYPE_DE[type] || type) : type; }
+
 const TYPE_COLORS = {
   Normal:'#A8A878', Fire:'#F08030', Water:'#6890F0', Electric:'#F8D030',
   Grass:'#78C850', Ice:'#98D8D8', Fighting:'#C03028', Poison:'#A040A0',
@@ -383,8 +419,8 @@ let moveAcIdx = [-1,-1,-1,-1]; // focused ac item per move
 
 function saveTeam() { localStorage.setItem('pokeTeam', JSON.stringify(team)); }
 
-function typeBadge(t) {
-  return `<span class="badge t-${t}">${t}</span>`;
+function typeBadge(type) {
+  return `<span class="badge t-${type}">${typeLabel(type)}</span>`;
 }
 
 function typeStyle(t) {
@@ -476,7 +512,7 @@ function renderEffPanel(idx) {
     const mv = moves[i] || {name:'',type:null};
     const barColor = mv.type ? TYPE_COLORS[mv.type] : 'transparent';
     const typeBtnHtml = mv.type
-      ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMoveExpand(${idx},${i})">${mv.type}</button>`
+      ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMoveExpand(${idx},${i})">${typeLabel(mv.type)}</button>`
       : `<span class="move-type-badge-sm move-type-badge-empty">?</span>`;
     moveGridHtml += `<div style="position:relative">
       <div class="move-card${activeMove===i?' active-move':''}" onclick="toggleMoveExpand(${idx},${i})">
@@ -508,16 +544,16 @@ function renderEffPanel(idx) {
       </div>
     </div>
     <div class="moves-strip">
-      <div class="moves-strip-title">⚔️ Attacken</div>
+      <div class="moves-strip-title">${t('moves')}</div>
       <div class="move-grid">${moveGridHtml}</div>
       ${activeMove !== null && moves[activeMove]?.type ? `<div class="move-expand" style="margin-top:8px">
-        <div class="move-expand-title">⚡ <span class="badge t-${moves[activeMove].type}">${moves[activeMove].type}</span>${moves[activeMove].name ? ` — ${moves[activeMove].name}` : ''}</div>
+        <div class="move-expand-title">⚡ <span class="badge t-${moves[activeMove].type}">${typeLabel(moves[activeMove].type)}</span>${moves[activeMove].name ? ` — ${moves[activeMove].name}` : ''}</div>
         ${renderEffGroups(calcMoveOffense(moves[activeMove].type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
       </div>` : ''}
     </div>
     <div class="eff-body">
       <div class="eff-section">
-        <div class="eff-section-title">🛡️ Verteidigung — getroffen von</div>
+        <div class="eff-section-title">${t('defense')}</div>
         ${renderEffGroups(def, defLabels)}
       </div>
     </div>
@@ -767,12 +803,12 @@ function saveSlot() {
 function renderQsTypes() {
   const grid = document.getElementById('typeGrid');
   grid.innerHTML = '';
-  for (const t of TYPES) {
+  for (const type of TYPES) {
     const b = document.createElement('button');
     b.className = 'type-btn';
-    b.textContent = t;
-    b.style.cssText = `background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'}`;
-    b.onclick = () => showQs(t, b);
+    b.textContent = typeLabel(type);
+    b.style.cssText = `background:${TYPE_COLORS[type]};color:${LIGHT_TYPES.has(type)?'#333':'#fff'}`;
+    b.onclick = () => showQs(type, b);
     grid.appendChild(b);
   }
 }
@@ -801,13 +837,13 @@ function showQs(type, btn) {
 
   document.getElementById('qsPanel').innerHTML = `
     <div class="qs-panel">
-      <h3><span class="badge t-${type}">${type}</span></h3>
+      <h3>${typeBadge(type)}</h3>
       <div class="eff-section">
-        <div class="eff-section-title">🛡️ Verteidigung (getroffen von…)</div>
+        <div class="eff-section-title">${t('defense')}</div>
         ${renderEffGroups(defGroups, defLabels)}
       </div>
       <div class="eff-section">
-        <div class="eff-section-title">🗡️ Angriff (trifft… effektiv)</div>
+        <div class="eff-section-title">${currentLang==='de'?'🗡️ Angriff — trifft effektiv':'🗡️ Attack — hits effectively'}</div>
         ${renderEffGroups(atkGroups, atkLabels)}
       </div>
     </div>`;
@@ -877,6 +913,23 @@ function setLang(lang) {
   document.getElementById('btnEN').classList.toggle('active', lang === 'en');
   applyLang();
   buildMoveList();
+  // Update tab labels
+  document.getElementById('tab-btn-team').textContent = t('tab_team');
+  document.getElementById('tab-btn-favs').textContent = t('tab_favs');
+  document.getElementById('tab-btn-search').textContent = t('tab_search');
+  // Update Pokémon names in team from pokeList
+  team.forEach((p, i) => {
+    if (p && p.pokeId) {
+      const found = pokeList.find(pk => pk.id === p.pokeId);
+      if (found) team[i].name = found.display;
+    }
+  });
+  saveTeam();
+  renderTeam();
+  renderFavs();
+  if (qsActive) { qsActive.style.outline = 'none'; qsActive = null; }
+  document.getElementById('qsPanel').innerHTML = '';
+  renderQsTypes();
 }
 
 function capitalize(name) {
