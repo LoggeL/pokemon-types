@@ -2,193 +2,151 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Pokémon Typ-Rechner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokémon Type Tool</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #1a1a2e;
-    color: #fff;
-    min-height: 100vh;
-    padding: 16px;
-  }
-  h1 {
-    text-align: center;
-    font-size: 1.3rem;
-    margin-bottom: 16px;
-    color: #e0e0ff;
-    letter-spacing: 1px;
-  }
-  .type-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    max-width: 480px;
-    margin: 0 auto 20px;
-  }
-  .type-btn {
-    padding: 10px 6px;
-    border: none;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: transform 0.1s, box-shadow 0.1s, opacity 0.1s;
-    opacity: 0.85;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  }
-  .type-btn:active { transform: scale(0.95); }
-  .type-btn.selected {
-    opacity: 1;
-    transform: scale(1.06);
-    box-shadow: 0 4px 16px rgba(255,255,255,0.4);
-    outline: 3px solid white;
-  }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  .app { max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
+  h1 { text-align: center; padding: 16px; font-size: 1.2rem; color: #a0a0c0; letter-spacing: 1px; }
 
-  .result-section {
-    max-width: 480px;
-    margin: 0 auto;
-    display: none;
-  }
-  .result-section.visible { display: block; }
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 2px solid #2a2a4e; }
+  .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 0.9rem; color: #888; transition: all 0.2s; }
+  .tab.active { color: #fff; border-bottom: 2px solid #6060ff; margin-bottom: -2px; }
 
-  .selected-type-badge {
-    text-align: center;
-    margin-bottom: 16px;
-  }
-  .selected-type-badge span {
-    padding: 8px 28px;
-    border-radius: 30px;
-    font-size: 1.2rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  }
+  /* Team Grid */
+  .team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+  .slot { background: #16213e; border-radius: 12px; padding: 12px; min-height: 80px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; position: relative; display: flex; flex-direction: column; gap: 6px; }
+  .slot:hover { border-color: #3a3a6e; }
+  .slot.active { border-color: #6060ff; }
+  .slot.empty { align-items: center; justify-content: center; }
+  .slot-add { font-size: 2rem; color: #444; }
+  .slot-name { font-size: 0.85rem; font-weight: 600; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot-types { display: flex; gap: 4px; flex-wrap: wrap; }
+  .slot-clear { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #666; font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .slot-clear:hover { color: #f00; background: #2a1a1a; }
 
-  .card {
-    background: rgba(255,255,255,0.05);
-    border-radius: 16px;
-    padding: 14px;
-    margin-bottom: 12px;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .card h2 {
-    font-size: 0.9rem;
-    color: #aaa;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  .effectiveness-row {
-    margin-bottom: 8px;
-  }
-  .eff-label {
-    font-size: 0.75rem;
-    color: #888;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .eff-label .mult {
-    font-size: 1rem;
-    font-weight: 800;
-  }
-  .x4 .mult { color: #ff4444; }
-  .x2 .mult { color: #ff8c00; }
-  .x05 .mult { color: #4caf50; }
-  .x025 .mult { color: #2196f3; }
-  .x0 .mult { color: #666; }
-
-  .type-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .chip {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .empty-label {
-    font-size: 0.75rem;
-    color: #555;
-    font-style: italic;
-  }
+  /* Type badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
   /* Type colors */
-  .t-normal   { background:#A8A878; color:#fff; }
-  .t-fire     { background:#F08030; color:#fff; }
-  .t-water    { background:#6890F0; color:#fff; }
-  .t-electric { background:#F8D030; color:#333; }
-  .t-grass    { background:#78C850; color:#fff; }
-  .t-ice      { background:#98D8D8; color:#333; }
-  .t-fighting { background:#C03028; color:#fff; }
-  .t-poison   { background:#A040A0; color:#fff; }
-  .t-ground   { background:#E0C068; color:#333; }
-  .t-flying   { background:#A890F0; color:#fff; }
-  .t-psychic  { background:#F85888; color:#fff; }
-  .t-bug      { background:#A8B820; color:#fff; }
-  .t-rock     { background:#B8A038; color:#fff; }
-  .t-ghost    { background:#705898; color:#fff; }
-  .t-dragon   { background:#7038F8; color:#fff; }
-  .t-dark     { background:#705848; color:#fff; }
-  .t-steel    { background:#B8B8D0; color:#333; }
-  .t-fairy    { background:#EE99AC; color:#fff; }
+  .t-Normal   { background: #A8A878; }
+  .t-Fire     { background: #F08030; }
+  .t-Water    { background: #6890F0; }
+  .t-Electric { background: #F8D030; color: #333; text-shadow: none; }
+  .t-Grass    { background: #78C850; }
+  .t-Ice      { background: #98D8D8; color: #333; text-shadow: none; }
+  .t-Fighting { background: #C03028; }
+  .t-Poison   { background: #A040A0; }
+  .t-Ground   { background: #E0C068; color: #333; text-shadow: none; }
+  .t-Flying   { background: #A890F0; }
+  .t-Psychic  { background: #F85888; }
+  .t-Bug      { background: #A8B820; }
+  .t-Rock     { background: #B8A038; }
+  .t-Ghost    { background: #705898; }
+  .t-Dragon   { background: #7038F8; }
+  .t-Dark     { background: #705848; }
+  .t-Steel    { background: #B8B8D0; color: #333; text-shadow: none; }
+  .t-Fairy    { background: #EE99AC; color: #333; text-shadow: none; }
 
-  .hint {
-    text-align: center;
-    color: #555;
-    font-size: 0.85rem;
-    margin-top: 8px;
-  }
+  /* Effectiveness panel */
+  .eff-panel { margin: 4px 12px; background: #16213e; border-radius: 12px; padding: 12px; }
+  .eff-panel h3 { font-size: 0.85rem; color: #aaa; margin-bottom: 8px; }
+  .eff-section { margin-bottom: 12px; }
+  .eff-section-title { font-size: 0.75rem; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .eff-group { margin-bottom: 8px; }
+  .eff-group-label { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; }
+  .lbl-4x  { background: #8b0000; color: #fff; }
+  .lbl-2x  { background: #d4500a; color: #fff; }
+  .lbl-05x { background: #1a6b1a; color: #fff; }
+  .lbl-025x{ background: #0a4480; color: #fff; }
+  .lbl-0x  { background: #444; color: #ccc; }
+  .eff-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* Quick search tab */
+  .type-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; }
+  .type-btn { border: none; border-radius: 8px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); transition: transform 0.1s, opacity 0.1s; }
+  .type-btn:active { transform: scale(0.95); }
+  .type-btn.Electric, .type-btn.Ice, .type-btn.Ground, .type-btn.Steel, .type-btn.Fairy { color: #333; text-shadow: none; }
+  .qs-panel { margin: 0 12px; background: #16213e; border-radius: 12px; padding: 12px; }
+  .qs-panel h3 { font-size: 0.9rem; margin-bottom: 10px; }
+
+  /* Modal */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal { background: #16213e; border-radius: 16px; padding: 20px; width: 90%; max-width: 360px; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 1rem; margin-bottom: 14px; }
+  .modal input { width: 100%; background: #1a1a2e; border: 1px solid #3a3a6e; color: #eee; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; margin-bottom: 12px; }
+  .modal input:focus { outline: none; border-color: #6060ff; }
+  .modal label { font-size: 0.75rem; color: #aaa; display: block; margin-bottom: 4px; }
+  .type-select-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+  .type-opt { border: 2px solid transparent; border-radius: 6px; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; cursor: pointer; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+  .type-opt.Electric, .type-opt.Ice, .type-opt.Ground, .type-opt.Steel, .type-opt.Fairy { color: #333; text-shadow: none; }
+  .type-opt.selected { border-color: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.4); }
+  .type-opt-none { border: 2px solid #3a3a6e; background: #2a2a4e; color: #aaa; border-radius: 6px; padding: 4px 10px; font-size: 0.72rem; cursor: pointer; }
+  .type-opt-none.selected { border-color: #fff; color: #fff; }
+  .modal-btns { display: flex; gap: 8px; margin-top: 4px; }
+  .btn { flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+  .btn-primary { background: #4040cc; color: #fff; }
+  .btn-secondary { background: #2a2a4e; color: #aaa; }
+  .btn:active { opacity: 0.8; }
+
+  .hidden { display: none; }
 </style>
 </head>
 <body>
-<h1>⚡ Typ-Effektivität</h1>
+<div class="app">
+  <h1>⚔️ Pokémon Type Tool</h1>
 
-<div class="type-grid" id="typeGrid"></div>
-<p class="hint" id="hint">Tippe einen Typ an</p>
-
-<div class="result-section" id="results">
-  <div class="selected-type-badge"><span id="selectedBadge"></span></div>
-
-  <div class="card">
-    <h2>🗡️ Angriff — dieser Typ trifft...</h2>
-    <div id="offResult"></div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('team')">🏆 Team</div>
+    <div class="tab" onclick="switchTab('search')">🔍 Typ-Suche</div>
   </div>
 
-  <div class="card">
-    <h2>🛡️ Verteidigung — dieser Typ wird getroffen von...</h2>
-    <div id="defResult"></div>
+  <!-- Team Tab -->
+  <div id="tab-team">
+    <div class="team-grid" id="teamGrid"></div>
+    <div id="effPanel"></div>
+  </div>
+
+  <!-- Quick Search Tab -->
+  <div id="tab-search" class="hidden">
+    <div class="type-grid" id="typeGrid"></div>
+    <div id="qsPanel"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Pokémon hinzufügen</h2>
+    <label>Name</label>
+    <input type="text" id="pokeName" placeholder="z.B. Glurak" maxlength="20">
+    <label>Typ 1 *</label>
+    <div class="type-select-grid" id="type1Grid"></div>
+    <label>Typ 2 (optional)</label>
+    <div class="type-select-grid" id="type2Grid"></div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveSlot()">Speichern</button>
+    </div>
   </div>
 </div>
 
 <script>
-const TYPES = [
-  'Normal','Fire','Water','Electric','Grass','Ice',
-  'Fighting','Poison','Ground','Flying','Psychic','Bug',
-  'Rock','Ghost','Dragon','Dark','Steel','Fairy'
-];
+const TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
 
-const TYPE_CLASS = {
-  Normal:'t-normal', Fire:'t-fire', Water:'t-water', Electric:'t-electric',
-  Grass:'t-grass', Ice:'t-ice', Fighting:'t-fighting', Poison:'t-poison',
-  Ground:'t-ground', Flying:'t-flying', Psychic:'t-psychic', Bug:'t-bug',
-  Rock:'t-rock', Ghost:'t-ghost', Dragon:'t-dragon', Dark:'t-dark',
-  Steel:'t-steel', Fairy:'t-fairy'
+const TYPE_COLORS = {
+  Normal:'#A8A878', Fire:'#F08030', Water:'#6890F0', Electric:'#F8D030',
+  Grass:'#78C850', Ice:'#98D8D8', Fighting:'#C03028', Poison:'#A040A0',
+  Ground:'#E0C068', Flying:'#A890F0', Psychic:'#F85888', Bug:'#A8B820',
+  Rock:'#B8A038', Ghost:'#705898', Dragon:'#7038F8', Dark:'#705848',
+  Steel:'#B8B8D0', Fairy:'#EE99AC'
 };
 
-// chart[attacker][defender] = multiplier (2=2x, 0.5=0.5x, 0=immune)
-// Only non-1x values stored
+const LIGHT_TYPES = new Set(['Electric','Ice','Ground','Steel','Fairy']);
+
 const CHART = {
   Normal:   { Rock:0.5, Steel:0.5, Ghost:0 },
   Fire:     { Fire:0.5, Water:0.5, Rock:0.5, Dragon:0.5, Grass:2, Ice:2, Bug:2, Steel:2 },
@@ -210,83 +168,298 @@ const CHART = {
   Fairy:    { Fire:0.5, Poison:0.5, Steel:0.5, Fighting:2, Dragon:2, Dark:2 }
 };
 
-function getOffensive(attType) {
-  const row = CHART[attType] || {};
-  const result = { 2:[], 0.5:[], 0:[] };
+// State
+let team = JSON.parse(localStorage.getItem('pokeTeam') || 'Array(6).fill(null)');
+if (!Array.isArray(team) || team.length !== 6) team = Array(6).fill(null);
+let editingSlot = -1;
+let selectedSlot = -1;
+let sel1 = null, sel2 = null;
+
+function saveTeam() { localStorage.setItem('pokeTeam', JSON.stringify(team)); }
+
+function typeBadge(t) {
+  return `<span class="badge t-${t}">${t}</span>`;
+}
+
+function typeStyle(t) {
+  const color = TYPE_COLORS[t];
+  const textColor = LIGHT_TYPES.has(t) ? '#333' : '#fff';
+  return `background:${color};color:${textColor}`;
+}
+
+// Effectiveness calculation
+function getDefMultiplier(type1, type2, attacker) {
+  let m1 = CHART[attacker]?.[type1] ?? 1;
+  let m2 = type2 ? (CHART[attacker]?.[type2] ?? 1) : 1;
+  return m1 * m2;
+}
+
+function calcDefense(type1, type2) {
+  const groups = { 4:[], 2:[], 0.5:[], 0.25:[], 0:[] };
+  for (const atk of TYPES) {
+    const m = getDefMultiplier(type1, type2, atk);
+    if (groups[m] !== undefined) groups[m].push(atk);
+  }
+  return groups;
+}
+
+function calcAttack(type1, type2) {
+  const groups = { 2:[], 0.5:[], 0:[] };
   for (const def of TYPES) {
-    const m = row[def] ?? 1;
-    if (m === 2) result[2].push(def);
-    else if (m === 0.5) result[0.5].push(def);
-    else if (m === 0) result[0].push(def);
+    const m1 = CHART[type1]?.[def] ?? 1;
+    const m2 = type2 ? (CHART[type2]?.[def] ?? 1) : 1;
+    const best = Math.max(m1, m2);
+    // Only show notable results
+    if (best === 2) groups[2].push(def);
+    else if (best === 0) {
+      // Both are immune or 0
+      const min = Math.min(m1, m2);
+      if (min === 0) groups[0].push(def);
+      else if (best < 1) groups[0.5].push(def);
+    } else if (best < 1) groups[0.5].push(def);
   }
-  return result;
+  // For 0x: only if best possible is 0 (both immune or one immune and other is not super effective)
+  // Re-do properly:
+  groups[2] = []; groups[0.5] = []; groups[0] = [];
+  for (const def of TYPES) {
+    const m1 = CHART[type1]?.[def] ?? 1;
+    const m2 = type2 ? (CHART[type2]?.[def] ?? 1) : 1;
+    const best = Math.max(m1, m2);
+    if (best >= 2) groups[2].push(def);
+    else if (best === 0) groups[0].push(def);
+    else if (best < 1) groups[0.5].push(def);
+  }
+  return groups;
 }
 
-function getDefensive(defType) {
-  const result = { 2:[], 0.5:[], 0:[] };
-  for (const att of TYPES) {
-    const row = CHART[att] || {};
-    const m = row[defType] ?? 1;
-    if (m === 2) result[2].push(att);
-    else if (m === 0.5) result[0.5].push(att);
-    else if (m === 0) result[0].push(att);
+function renderEffGroups(groups, labels) {
+  let html = '';
+  for (const [mult, label, cls] of labels) {
+    const types = groups[mult];
+    if (types && types.length > 0) {
+      html += `<div class="eff-group">
+        <span class="eff-group-label ${cls}">${label}</span>
+        <div class="eff-badges">${types.map(t => `<span class="badge t-${t}">${t}</span>`).join('')}</div>
+      </div>`;
+    }
   }
-  return result;
+  return html || '<span style="color:#666;font-size:0.75rem">–</span>';
 }
 
-function renderRows(data, mode) {
-  // mode: 'off' or 'def'
-  const rows = [
-    { mult: 2,   key: 2,   label: mode==='off' ? 'Trifft 2× (super effektiv)' : 'Schwäche 2× (trifft härter)',  cls: 'x2' },
-    { mult: 0.5, key: 0.5, label: mode==='off' ? 'Trifft ½× (nicht sehr effektiv)' : 'Resistenz ½× (trifft schwächer)', cls: 'x05' },
-    { mult: 0,   key: 0,   label: mode==='off' ? 'Keine Wirkung 0×' : 'Immunität 0× (gar kein Schaden)',    cls: 'x0' },
+function renderEffPanel(idx) {
+  const p = team[idx];
+  if (!p) return '';
+  const def = calcDefense(p.type1, p.type2);
+  const atk = calcAttack(p.type1, p.type2);
+
+  const defLabels = [
+    [4, '4×', 'lbl-4x'],
+    [2, '2×', 'lbl-2x'],
+    [0.5, '½×', 'lbl-05x'],
+    [0.25, '¼×', 'lbl-025x'],
+    [0, '0×', 'lbl-0x'],
   ];
-  return rows.map(r => {
-    const types = data[r.key];
-    const chips = types.length
-      ? types.map(t => `<span class="chip ${TYPE_CLASS[t]}">${t}</span>`).join('')
-      : `<span class="empty-label">—</span>`;
-    return `<div class="effectiveness-row">
-      <div class="eff-label ${r.cls}"><span class="mult">${r.mult}×</span> ${r.label}</div>
-      <div class="type-chips">${chips}</div>
-    </div>`;
-  }).join('');
+  const atkLabels = [
+    [2, '2×', 'lbl-2x'],
+    [0.5, '½×', 'lbl-05x'],
+    [0, '0×', 'lbl-0x'],
+  ];
+
+  return `<div class="eff-panel">
+    <h3>${p.name} — ${typeBadge(p.type1)}${p.type2 ? ' ' + typeBadge(p.type2) : ''}</h3>
+    <div class="eff-section">
+      <div class="eff-section-title">🛡️ Verteidigung (wird getroffen von…)</div>
+      ${renderEffGroups(def, defLabels)}
+    </div>
+    <div class="eff-section">
+      <div class="eff-section-title">🗡️ Angriff (trifft … effektiv)</div>
+      ${renderEffGroups(atk, atkLabels)}
+    </div>
+  </div>`;
 }
 
-// Build buttons
-const grid = document.getElementById('typeGrid');
-TYPES.forEach(t => {
-  const btn = document.createElement('button');
-  btn.className = `type-btn ${TYPE_CLASS[t]}`;
-  btn.textContent = t;
-  btn.dataset.type = t;
-  btn.addEventListener('click', () => selectType(t));
-  grid.appendChild(btn);
-});
-
-let selected = null;
-function selectType(t) {
-  if (selected === t) {
-    selected = null;
-    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
-    document.getElementById('results').classList.remove('visible');
-    document.getElementById('hint').style.display = 'block';
-    return;
+function renderTeam() {
+  const grid = document.getElementById('teamGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const p = team[i];
+    const div = document.createElement('div');
+    div.className = 'slot' + (!p ? ' empty' : '') + (selectedSlot === i ? ' active' : '');
+    if (p) {
+      div.innerHTML = `
+        <button class="slot-clear" onclick="clearSlot(event,${i})">✕</button>
+        <div class="slot-name">${p.name}</div>
+        <div class="slot-types">${typeBadge(p.type1)}${p.type2 ? typeBadge(p.type2) : ''}</div>`;
+      div.onclick = () => selectSlot(i);
+    } else {
+      div.innerHTML = `<div class="slot-add">＋</div>`;
+      div.onclick = () => openModal(i);
+    }
+    grid.appendChild(div);
   }
-  selected = t;
-  document.querySelectorAll('.type-btn').forEach(b => {
-    b.classList.toggle('selected', b.dataset.type === t);
-  });
-  document.getElementById('hint').style.display = 'none';
 
-  const badge = document.getElementById('selectedBadge');
-  badge.className = TYPE_CLASS[t];
-  badge.textContent = t;
-
-  document.getElementById('offResult').innerHTML = renderRows(getOffensive(t), 'off');
-  document.getElementById('defResult').innerHTML = renderRows(getDefensive(t), 'def');
-  document.getElementById('results').classList.add('visible');
+  const effPanel = document.getElementById('effPanel');
+  if (selectedSlot >= 0 && team[selectedSlot]) {
+    effPanel.innerHTML = renderEffPanel(selectedSlot);
+  } else {
+    effPanel.innerHTML = '';
+  }
 }
+
+function selectSlot(i) {
+  selectedSlot = (selectedSlot === i) ? -1 : i;
+  renderTeam();
+}
+
+function clearSlot(e, i) {
+  e.stopPropagation();
+  team[i] = null;
+  if (selectedSlot === i) selectedSlot = -1;
+  saveTeam();
+  renderTeam();
+}
+
+// Modal
+function openModal(idx) {
+  editingSlot = idx;
+  sel1 = null; sel2 = null;
+  document.getElementById('pokeName').value = '';
+  buildTypeSelectors();
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pokeName').focus(), 100);
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.remove('open');
+  }
+}
+
+function buildTypeSelectors() {
+  const g1 = document.getElementById('type1Grid');
+  const g2 = document.getElementById('type2Grid');
+  g1.innerHTML = '';
+  g2.innerHTML = '';
+
+  for (const t of TYPES) {
+    const b1 = document.createElement('button');
+    b1.className = 'type-opt' + (LIGHT_TYPES.has(t) ? ' ' + t : '');
+    b1.textContent = t;
+    b1.style.cssText = `background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'};border:2px solid transparent`;
+    b1.onclick = () => { sel1 = t; updateTypeSelectors(); };
+    g1.appendChild(b1);
+
+    const b2 = document.createElement('button');
+    b2.className = 'type-opt' + (LIGHT_TYPES.has(t) ? ' ' + t : '');
+    b2.textContent = t;
+    b2.style.cssText = `background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'};border:2px solid transparent`;
+    b2.onclick = () => { sel2 = t; updateTypeSelectors(); };
+    g2.appendChild(b2);
+  }
+
+  // None option for type2
+  const none = document.createElement('button');
+  none.className = 'type-opt-none selected';
+  none.textContent = '—';
+  none.id = 'type2None';
+  none.onclick = () => { sel2 = null; updateTypeSelectors(); };
+  g2.insertBefore(none, g2.firstChild);
+
+  updateTypeSelectors();
+}
+
+function updateTypeSelectors() {
+  const g1btns = document.querySelectorAll('#type1Grid .type-opt');
+  const g2btns = document.querySelectorAll('#type2Grid .type-opt');
+  const g2none = document.getElementById('type2None');
+
+  g1btns.forEach((b, i) => {
+    const t = TYPES[i];
+    b.style.borderColor = sel1 === t ? '#fff' : 'transparent';
+    b.style.boxShadow = sel1 === t ? '0 0 6px rgba(255,255,255,0.5)' : 'none';
+  });
+  g2btns.forEach((b, i) => {
+    const t = TYPES[i];
+    b.style.borderColor = sel2 === t ? '#fff' : 'transparent';
+    b.style.boxShadow = sel2 === t ? '0 0 6px rgba(255,255,255,0.5)' : 'none';
+  });
+  if (g2none) {
+    g2none.style.borderColor = sel2 === null ? '#fff' : '#3a3a6e';
+    g2none.style.color = sel2 === null ? '#fff' : '#aaa';
+  }
+}
+
+function saveSlot() {
+  const name = document.getElementById('pokeName').value.trim() || 'Pokémon';
+  if (!sel1) { alert('Bitte Typ 1 auswählen!'); return; }
+  team[editingSlot] = { name, type1: sel1, type2: sel2 || null };
+  saveTeam();
+  selectedSlot = editingSlot;
+  document.getElementById('overlay').classList.remove('open');
+  renderTeam();
+}
+
+// Quick Search Tab
+function renderQsTypes() {
+  const grid = document.getElementById('typeGrid');
+  grid.innerHTML = '';
+  for (const t of TYPES) {
+    const b = document.createElement('button');
+    b.className = 'type-btn';
+    b.textContent = t;
+    b.style.cssText = `background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'}`;
+    b.onclick = () => showQs(t, b);
+    grid.appendChild(b);
+  }
+}
+
+let qsActive = null;
+function showQs(type, btn) {
+  if (qsActive) qsActive.style.outline = 'none';
+  btn.style.outline = '2px solid #fff';
+  qsActive = btn;
+
+  // Defense for single type
+  const defGroups = {};
+  for (const atk of TYPES) {
+    const m = CHART[atk]?.[type] ?? 1;
+    if (!defGroups[m]) defGroups[m] = [];
+    defGroups[m].push(atk);
+  }
+  // Attack for single type
+  const atkGroups = {};
+  for (const def of TYPES) {
+    const m = CHART[type]?.[def] ?? 1;
+    if (!atkGroups[m]) atkGroups[m] = [];
+    atkGroups[m].push(def);
+  }
+
+  const defLabels = [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']];
+  const atkLabels = [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']];
+
+  document.getElementById('qsPanel').innerHTML = `
+    <div class="qs-panel">
+      <h3><span class="badge t-${type}">${type}</span></h3>
+      <div class="eff-section">
+        <div class="eff-section-title">🛡️ Verteidigung (getroffen von…)</div>
+        ${renderEffGroups(defGroups, defLabels)}
+      </div>
+      <div class="eff-section">
+        <div class="eff-section-title">🗡️ Angriff (trifft… effektiv)</div>
+        ${renderEffGroups(atkGroups, atkLabels)}
+      </div>
+    </div>`;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='team')||(i===1&&tab==='search')));
+  document.getElementById('tab-team').classList.toggle('hidden', tab !== 'team');
+  document.getElementById('tab-search').classList.toggle('hidden', tab !== 'search');
+}
+
+// Init
+renderTeam();
+renderQsTypes();
 </script>
 </body>
 </html>
