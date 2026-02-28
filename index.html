@@ -450,13 +450,14 @@ let team = JSON.parse(localStorage.getItem('pokeTeam') || '[null,null,null,null,
 if (!Array.isArray(team) || team.length !== 6) team = Array(6).fill(null);
 
 // Migrate old slots without moves/pokeId
-team = team.map(p => p ? { name: p.name, type1: p.type1, type2: p.type2 || null, pokeId: p.pokeId || null, past_types: p.past_types || [], moves: p.moves || [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}] } : null);
+team = team.map(p => p ? { name: p.name, type1: p.type1, type2: p.type2 || null, pokeId: p.pokeId || null, past_types: p.past_types || [], moves: p.moves || [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}], abilities: p.abilities || [], selectedAbility: p.selectedAbility || null, selectedNature: p.selectedNature || null } : null);
 
 let editingSlot = -1;
 let selectedSlot = -1;
 let sel1 = null, sel2 = null;
 let selectedPokeId = null;
 let selectedPastTypes = [];
+let selectedAbilities = [];
 let activeMove = null;    // expanded move index in panel
 let openPicker = null;    // open type picker index in panel
 let moveAcIdx = [-1,-1,-1,-1]; // focused ac item per move
@@ -512,6 +513,127 @@ function calcMoveOffense(moveType) {
     else if (m < 1) groups[0.5].push(def);
   }
   return groups;
+}
+
+function getAbilityDisplayName(abilityName) {
+  const cached = abilityNameCache[abilityName];
+  if (cached) return currentLang === 'de' ? (cached.de || cached.en || abilityName) : (cached.en || abilityName);
+  return capitalize(abilityName);
+}
+
+async function loadAbilityInfo(abilityName, slotIdx) {
+  if (abilityDescCache[abilityName] && abilityNameCache[abilityName]) {
+    reRenderPanel(slotIdx);
+    return;
+  }
+  try {
+    const r = await fetch(`https://pokeapi.co/api/v2/ability/${abilityName}`);
+    const d = await r.json();
+    // Names
+    const deNameEntry = d.names.find(n => n.language.name === 'de');
+    const enNameEntry = d.names.find(n => n.language.name === 'en');
+    abilityNameCache[abilityName] = { de: deNameEntry?.name || capitalize(abilityName), en: enNameEntry?.name || capitalize(abilityName) };
+    localStorage.setItem('abilityNames_v1', JSON.stringify(abilityNameCache));
+    // Descriptions
+    const deFlavorEntries = d.flavor_text_entries.filter(e => e.language.name === 'de');
+    const enFlavorEntries = d.flavor_text_entries.filter(e => e.language.name === 'en');
+    const deDesc = deFlavorEntries.length ? deFlavorEntries[deFlavorEntries.length-1].flavor_text.replace(/\n|\f/g,' ') : null;
+    const enDesc = enFlavorEntries.length ? enFlavorEntries[enFlavorEntries.length-1].flavor_text.replace(/\n|\f/g,' ') : null;
+    const enEffect = d.effect_entries.find(e => e.language.name === 'en');
+    abilityDescCache[abilityName] = { de: deDesc || enEffect?.short_effect || enDesc || '', en: enDesc || enEffect?.short_effect || '' };
+    localStorage.setItem('abilityDescs_v1', JSON.stringify(abilityDescCache));
+  } catch(e) { console.warn('Ability fetch failed', e); }
+  reRenderPanel(slotIdx);
+}
+
+function selectAbility(slotIdx, abilityName) {
+  if (!team[slotIdx]) return;
+  team[slotIdx].selectedAbility = team[slotIdx].selectedAbility === abilityName ? null : abilityName;
+  saveTeam();
+  if (team[slotIdx].selectedAbility) loadAbilityInfo(abilityName, slotIdx);
+  else reRenderPanel(slotIdx);
+}
+
+function renderAbilitySection(idx, p) {
+  if (!p.abilities || !p.abilities.length) return '';
+  const title = currentLang === 'de' ? '🔮 Fähigkeit' : '🔮 Ability';
+  const hiddenLabel = currentLang === 'de' ? '(Versteckt)' : '(Hidden)';
+  const chips = p.abilities.map(a => {
+    const selected = p.selectedAbility === a.name;
+    const displayName = getAbilityDisplayName(a.name);
+    const bg = a.isHidden ? 'background:#b8860b;color:#fff;' : 'background:rgba(255,255,255,0.08);color:#ccc;';
+    const border = selected ? 'border:2px solid #fff;' : 'border:2px solid transparent;';
+    const label = a.isHidden ? ` <span style="font-size:0.6rem;opacity:0.7">${hiddenLabel}</span>` : '';
+    return `<button onclick="selectAbility(${idx},'${a.name}')" style="${bg}${border}border-radius:20px;padding:4px 12px;font-size:0.75rem;cursor:pointer;font-weight:600">${displayName}${label}</button>`;
+  }).join('');
+  let descHtml = '';
+  if (p.selectedAbility && abilityDescCache[p.selectedAbility]) {
+    const desc = abilityDescCache[p.selectedAbility][currentLang] || abilityDescCache[p.selectedAbility].en || '';
+    if (desc) descHtml = `<p style="font-size:0.78rem;color:#bbb;margin-top:8px;line-height:1.5">${desc}</p>`;
+  }
+  return `<div style="background:rgba(0,0,0,0.3);padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
+    <div style="font-size:0.65rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${title}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
+    ${descHtml}
+  </div>`;
+}
+
+function selectNature(slotIdx, enName) {
+  if (!team[slotIdx]) return;
+  team[slotIdx].selectedNature = team[slotIdx].selectedNature === enName ? null : enName;
+  saveTeam();
+  naturePickerOpen = false;
+  reRenderPanel(slotIdx);
+}
+
+function toggleNaturePicker(slotIdx) {
+  naturePickerOpen = !naturePickerOpen;
+  reRenderPanel(slotIdx);
+}
+
+function renderNatureSection(idx, p) {
+  const title = currentLang === 'de' ? '🌟 Wesen' : '🌟 Nature';
+  const nat = p.selectedNature ? NATURES.find(n => n.en === p.selectedNature) : null;
+  const btnLabel = nat ? (currentLang === 'de' ? nat.de : nat.en) : (currentLang === 'de' ? 'Wählen…' : 'Choose…');
+  
+  let effectText = '';
+  if (nat) {
+    if (!nat.inc) {
+      effectText = 'Neutral';
+    } else {
+      const incName = currentLang === 'de' ? STAT_DE[nat.inc] : nat.inc;
+      const decName = currentLang === 'de' ? STAT_DE[nat.dec] : nat.dec;
+      effectText = `<span style="color:#5c5">+10% ${incName}</span> / <span style="color:#c55">-10% ${decName}</span>`;
+    }
+  }
+
+  let pickerHtml = '';
+  if (naturePickerOpen) {
+    const chips = NATURES.map(n => {
+      const selected = p.selectedNature === n.en;
+      const label = currentLang === 'de' ? n.de : n.en;
+      let bg = 'background:rgba(255,255,255,0.06);color:#999;';
+      if (n.inc) {
+        bg = 'background:rgba(255,255,255,0.06);color:#ccc;';
+      }
+      const border = selected ? 'border:2px solid #fff;' : 'border:2px solid transparent;';
+      let sub = '';
+      if (n.inc) {
+        const incShort = currentLang === 'de' ? STAT_DE[n.inc] : n.inc;
+        const decShort = currentLang === 'de' ? STAT_DE[n.dec] : n.dec;
+        sub = `<div style="font-size:0.55rem;margin-top:1px"><span style="color:#5c5">+${incShort.substring(0,3)}</span> <span style="color:#c55">-${decShort.substring(0,3)}</span></div>`;
+      }
+      return `<button onclick="selectNature(${idx},'${n.en}')" style="${bg}${border}border-radius:8px;padding:4px 6px;font-size:0.68rem;cursor:pointer;font-weight:600;text-align:center;min-width:60px">${label}${sub}</button>`;
+    }).join('');
+    pickerHtml = `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${chips}</div>`;
+  }
+
+  return `<div style="background:rgba(0,0,0,0.3);padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05)">
+    <div style="font-size:0.65rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${title}</div>
+    <button onclick="toggleNaturePicker(${idx})" style="background:rgba(255,255,255,0.08);color:#ccc;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:6px 14px;font-size:0.8rem;cursor:pointer;font-weight:600">${btnLabel}</button>
+    ${effectText ? `<span style="font-size:0.75rem;margin-left:10px">${effectText}</span>` : ''}
+    ${pickerHtml}
+  </div>`;
 }
 
 function renderEffGroups(groups, labels) {
@@ -590,6 +712,8 @@ function renderEffPanel(idx) {
         <div class="eff-header-types">${typeBadge(type1)}${type2?typeBadge(type2):''}</div>
       </div>
     </div>
+    ${renderAbilitySection(idx, p)}
+    ${renderNatureSection(idx, p)}
     <div class="moves-strip">
       <div class="moves-strip-title">${t('moves')}</div>
       <div class="move-grid">${moveGridHtml}</div>
@@ -763,7 +887,7 @@ function renderTeam() {
 }
 
 function selectSlot(i) {
-  if (selectedSlot !== i) activeMove = null;
+  if (selectedSlot !== i) { activeMove = null; naturePickerOpen = false; }
   selectedSlot = (selectedSlot === i) ? -1 : i;
   renderTeam();
 }
@@ -782,6 +906,7 @@ function openModal(idx) {
   sel1 = null; sel2 = null;
   selectedPokeId = null;
   selectedPastTypes = [];
+  selectedAbilities = [];
   document.getElementById('pokeName').value = '';
   document.getElementById('autofillHint').classList.remove('visible');
   document.getElementById('typeOverridePanel').style.display = 'none';
@@ -855,14 +980,18 @@ function updateTypeSelectors() {
 function saveSlot() {
   const name = document.getElementById('pokeName').value.trim() || 'Pokémon';
   if (!sel1) { alert('Bitte ein Pokémon aus der Liste auswählen!'); return; }
-  const existingMoves = team[editingSlot]?.moves || Array(4).fill(null).map(()=>({name:'',type:null}));
+  const existing = team[editingSlot];
+  const existingMoves = existing?.moves || Array(4).fill(null).map(()=>({name:'',type:null}));
   team[editingSlot] = {
     name,
     type1: sel1,
     type2: sel2 || null,
     pokeId: selectedPokeId || null,
     past_types: selectedPastTypes || [],
-    moves: existingMoves
+    moves: existingMoves,
+    abilities: selectedAbilities.length ? selectedAbilities : (existing?.abilities || []),
+    selectedAbility: existing?.selectedAbility || null,
+    selectedNature: existing?.selectedNature || null
   };
   saveTeam();
   selectedSlot = editingSlot;
@@ -1094,6 +1223,7 @@ async function selectPoke(name, id, display) {
     sel1 = types[0] || null;
     sel2 = types[1] || null;
     selectedPastTypes = d.past_types || [];
+    selectedAbilities = d.abilities.map(a => ({ name: a.ability.name, isHidden: a.is_hidden }));
     updateTypeSelectors();
     const hint = document.getElementById('autofillHint');
     hint.classList.add('visible');
@@ -1217,7 +1347,10 @@ function addFavToTeam(favIdx) {
     type2: f.type2,
     pokeId: f.id,
     past_types: f.past_types || [],
-    moves: Array(4).fill(null).map(()=>({name:'',type:null}))
+    moves: Array(4).fill(null).map(()=>({name:'',type:null})),
+    abilities: [],
+    selectedAbility: null,
+    selectedNature: null
   };
   saveTeam();
   switchTab('team');
@@ -1230,6 +1363,7 @@ function openFavSearch() {
   editingSlot = -1;
   sel1 = null; sel2 = null;
   selectedPokeId = null;
+  selectedAbilities = [];
   document.getElementById('pokeName').value = '';
   document.getElementById('autofillHint').classList.remove('visible');
   document.getElementById('typeOverridePanel').style.display = 'none';
@@ -1258,7 +1392,39 @@ let moveDE = {};
 let moveTypeCache = JSON.parse(localStorage.getItem('moveTypes_v1') || '{}');
 let moveDescCache = JSON.parse(localStorage.getItem('moveDescs_v1') || '{}');
 let moveStatCache = JSON.parse(localStorage.getItem('moveStats_v1') || '{}'); // {id: {power,accuracy,pp,past_values}}
+let abilityDescCache = JSON.parse(localStorage.getItem('abilityDescs_v1') || '{}');
+let abilityNameCache = JSON.parse(localStorage.getItem('abilityNames_v1') || '{}');
 let currentGen = 9;
+
+const NATURES = [
+  {en:'Hardy',  de:'Robust',    inc:null,     dec:null},
+  {en:'Lonely', de:'Solo',      inc:'Attack', dec:'Defense'},
+  {en:'Brave',  de:'Kühn',      inc:'Attack', dec:'Speed'},
+  {en:'Adamant',de:'Hart',      inc:'Attack', dec:'Sp. Atk'},
+  {en:'Naughty',de:'Frech',     inc:'Attack', dec:'Sp. Def'},
+  {en:'Bold',   de:'Kühn',      inc:'Defense',dec:'Attack'},
+  {en:'Docile', de:'Sanft',     inc:null,     dec:null},
+  {en:'Relaxed',de:'Locker',    inc:'Defense',dec:'Speed'},
+  {en:'Impish', de:'Pfiffig',   inc:'Defense',dec:'Sp. Atk'},
+  {en:'Lax',    de:'Lasch',     inc:'Defense',dec:'Sp. Def'},
+  {en:'Timid',  de:'Scheu',     inc:'Speed',  dec:'Attack'},
+  {en:'Hasty',  de:'Hastig',    inc:'Speed',  dec:'Defense'},
+  {en:'Serious',de:'Ernst',     inc:null,     dec:null},
+  {en:'Jolly',  de:'Froh',      inc:'Speed',  dec:'Sp. Atk'},
+  {en:'Naive',  de:'Naiv',      inc:'Speed',  dec:'Sp. Def'},
+  {en:'Modest', de:'Mäßig',     inc:'Sp. Atk',dec:'Attack'},
+  {en:'Mild',   de:'Mild',      inc:'Sp. Atk',dec:'Defense'},
+  {en:'Quiet',  de:'Still',     inc:'Sp. Atk',dec:'Speed'},
+  {en:'Bashful',de:'Schüchtern',inc:null,     dec:null},
+  {en:'Rash',   de:'Hitzig',    inc:'Sp. Atk',dec:'Sp. Def'},
+  {en:'Calm',   de:'Sanft',     inc:'Sp. Def',dec:'Attack'},
+  {en:'Gentle', de:'Zart',      inc:'Sp. Def',dec:'Defense'},
+  {en:'Sassy',  de:'Frech',     inc:'Sp. Def',dec:'Speed'},
+  {en:'Careful',de:'Sorgfältig',inc:'Sp. Def',dec:'Sp. Atk'},
+  {en:'Quirky', de:'Kauzig',    inc:null,     dec:null},
+];
+const STAT_DE = { 'Attack':'Angriff','Defense':'Verteidigung','Speed':'Initiative','Sp. Atk':'Sp. Angriff','Sp. Def':'Sp. Verteidigung' };
+let naturePickerOpen = false;
 
 const VG_TO_GEN = {
   'red-blue':1,'yellow':1,'gold-silver':2,'crystal':2,
