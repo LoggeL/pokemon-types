@@ -831,12 +831,43 @@ async function selectOpp(slotIdx, id, name, display) {
     opponent = { name: display, pokeId: id, type1: types[0]||null, type2: types[1]||null, past_types: d.past_types || [], allMoves: d.moves || [] };
   } catch(e) {}
   reRenderPanel(slotIdx);
+  prefetchOpponentMoveTypes(slotIdx);
 }
 
 function clearOpponent(slotIdx) {
   opponent = null;
   activeOppMove = null;
   reRenderPanel(slotIdx);
+}
+
+async function prefetchOpponentMoveTypes(slotIdx) {
+  if (!opponent?.allMoves?.length) return;
+  const missing = opponent.allMoves
+    .map(mv => mv.move.url.split('/').filter(Boolean).pop())
+    .filter(id => !moveTypeCache[id]);
+  if (!missing.length) return;
+  // Fetch in parallel batches of 10
+  for (let i = 0; i < missing.length; i += 10) {
+    const batch = missing.slice(i, i + 10);
+    await Promise.all(batch.map(async id => {
+      try {
+        const r = await fetch(`https://pokeapi.co/api/v2/move/${id}`);
+        const d = await r.json();
+        moveTypeCache[id] = d.type.name.charAt(0).toUpperCase() + d.type.name.slice(1);
+        if (!moveDescCache[id]) {
+          const getDesc = lang => (d.flavor_text_entries||[]).filter(e=>e.language.name===lang).map(e=>e.flavor_text.replace(/\n|\f/g,' ')).pop() || null;
+          moveDescCache[id] = { de: getDesc('de'), en: getDesc('en') };
+        }
+        if (!moveStatCache[id]) {
+          moveStatCache[id] = { power: d.power, accuracy: d.accuracy, pp: d.pp, past_values: d.past_values || [] };
+        }
+      } catch(e) {}
+    }));
+    localStorage.setItem('moveTypes_v1', JSON.stringify(moveTypeCache));
+    localStorage.setItem('moveDescs_v1', JSON.stringify(moveDescCache));
+    localStorage.setItem('moveStats_v1', JSON.stringify(moveStatCache));
+    reRenderPanel(slotIdx); // update after each batch
+  }
 }
 
 function toggleOppMove(slotIdx, name, type) {
