@@ -554,8 +554,23 @@ function selectAbility(slotIdx, abilityName) {
   else reRenderPanel(slotIdx);
 }
 
+async function fetchAbilitiesIfMissing(idx) {
+  const p = team[idx];
+  if (!p?.pokeId || p.abilities?.length) return;
+  try {
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${p.pokeId}`);
+    const d = await r.json();
+    team[idx].abilities = d.abilities.map(a => ({ name: a.ability.name, isHidden: a.is_hidden }));
+    saveTeam();
+    if (selectedSlot === idx) document.getElementById('effPanel').innerHTML = renderEffPanel(idx);
+  } catch(e) {}
+}
+
 function renderAbilitySection(idx, p) {
-  if (!p.abilities || !p.abilities.length) return '';
+  if (!p.abilities || !p.abilities.length) {
+    fetchAbilitiesIfMissing(idx);
+    return '<div style="padding:8px 12px;font-size:0.72rem;color:#555">Lade Fähigkeiten...</div>';
+  }
   const title = currentLang === 'de' ? '🔮 Fähigkeit' : '🔮 Ability';
   const hiddenLabel = currentLang === 'de' ? '(Versteckt)' : '(Hidden)';
   const chips = p.abilities.map(a => {
