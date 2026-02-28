@@ -1626,7 +1626,7 @@ let moveDescCache = JSON.parse(localStorage.getItem('moveDescs_v1') || '{}');
 let moveStatCache = JSON.parse(localStorage.getItem('moveStats_v1') || '{}'); // {id: {power,accuracy,pp,past_values}}
 let abilityDescCache = JSON.parse(localStorage.getItem('abilityDescs_v1') || '{}');
 let abilityNameCache = JSON.parse(localStorage.getItem('abilityNames_v1') || '{}');
-let currentGen = 9;
+let currentGen = parseInt(localStorage.getItem('currentGen') || '9');
 
 const NATURES = [
   {en:'Hardy',  de:'Robust',    inc:null,     dec:null},
@@ -1699,6 +1699,7 @@ function buildGenToggle() {
 
 function setGen(g) {
   currentGen = g;
+  localStorage.setItem('currentGen', g);
   buildGenToggle();
   renderTeam();
   renderQsTypes();
