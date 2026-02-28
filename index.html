@@ -926,8 +926,17 @@ function setLang(lang) {
     }
     // Update move names
     (p.moves || []).forEach((mv, j) => {
-      if (mv?.moveId) {
-        const found = moveList.find(m => m.id === mv.moveId);
+      if (!mv?.name) return;
+      // Try to resolve moveId if missing
+      if (!mv.moveId) {
+        const q = mv.name.toLowerCase();
+        const byEN = _moveEN.find(m => capitalize(m.name).toLowerCase() === q);
+        const byDE = Object.entries(moveDE).find(([,n]) => n.toLowerCase() === q);
+        if (byEN) team[i].moves[j].moveId = byEN.id;
+        else if (byDE) team[i].moves[j].moveId = parseInt(byDE[0]);
+      }
+      if (team[i].moves[j].moveId) {
+        const found = moveList.find(m => m.id === team[i].moves[j].moveId);
         if (found) team[i].moves[j].name = found.display;
       }
     });
@@ -1107,8 +1116,8 @@ function renderFavs() {
       <img src="${artUrl}" onerror="this.style.opacity=0.3">
       <div class="fav-card-name">${f.display}</div>
       <div class="fav-card-types">
-        ${f.type1?`<span class="badge t-${f.type1}">${f.type1}</span>`:''}
-        ${f.type2?`<span class="badge t-${f.type2}">${f.type2}</span>`:''}
+        ${f.type1?typeBadge(f.type1):''}
+        ${f.type2?typeBadge(f.type2):''}
       </div>
     </div>`;
   }).join('');
