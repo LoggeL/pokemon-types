@@ -441,8 +441,8 @@ function renderEffPanel(idx) {
     const mv = moves[i] || {name:'',type:null};
     const barColor = mv.type ? TYPE_COLORS[mv.type] : 'transparent';
     const typeBtnHtml = mv.type
-      ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMovePicker(${idx},${i})">${mv.type}</button>`
-      : `<button class="move-type-badge-sm move-type-badge-empty" onmousedown="toggleMovePicker(${idx},${i})">?</button>`;
+      ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMoveExpand(${idx},${i})">${mv.type}</button>`
+      : `<span class="move-type-badge-sm move-type-badge-empty">?</span>`;
     moveGridHtml += `<div>
       <div class="move-card${activeMove===i?' active-move':''}">
         <div class="move-card-type-bar" style="background:${barColor}"></div>
@@ -458,10 +458,7 @@ function renderEffPanel(idx) {
           ${typeBtnHtml}
         </div>
       </div>
-      ${openPicker===i ? `<div class="move-picker">
-        <button class="move-picker-none" onmousedown="setMoveType(${idx},${i},null)">—</button>
-        ${TYPES.map(t=>`<button class="move-picker-opt" style="background:${TYPE_COLORS[t]};color:${LIGHT_TYPES.has(t)?'#333':'#fff'};border-color:${mv.type===t?'#fff':'transparent'}" onmousedown="setMoveType(${idx},${i},'${t}')">${t}</button>`).join('')}
-      </div>` : ''}
+
       ${activeMove===i && mv.type ? `<div class="move-expand">
         <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${mv.type}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
         ${renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
@@ -495,23 +492,8 @@ function renderEffPanel(idx) {
   </div>`;
 }
 
-function toggleMovePicker(slotIdx, moveIdx) {
-  openPicker = (openPicker === moveIdx) ? null : moveIdx;
-  if (openPicker === null && team[slotIdx]?.moves?.[moveIdx]?.type) {
-    activeMove = (activeMove === moveIdx) ? null : moveIdx;
-  } else {
-    activeMove = null;
-  }
-  reRenderPanel(slotIdx);
-}
-
-function setMoveType(slotIdx, moveIdx, type) {
-  if (!team[slotIdx]) return;
-  if (!team[slotIdx].moves) team[slotIdx].moves = [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}];
-  team[slotIdx].moves[moveIdx] = { ...team[slotIdx].moves[moveIdx], type };
-  openPicker = null;
-  activeMove = type ? moveIdx : null;
-  saveTeam();
+function toggleMoveExpand(slotIdx, moveIdx) {
+  activeMove = (activeMove === moveIdx) ? null : moveIdx;
   reRenderPanel(slotIdx);
 }
 
