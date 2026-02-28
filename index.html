@@ -876,6 +876,7 @@ function setLang(lang) {
   document.getElementById('btnDE').classList.toggle('active', lang === 'de');
   document.getElementById('btnEN').classList.toggle('active', lang === 'en');
   applyLang();
+  buildMoveList();
 }
 
 function capitalize(name) {
@@ -1141,13 +1142,6 @@ function buildMoveList() {
   } else {
     moveList = _moveEN.map(m => ({ id: m.id, name: m.name, display: capitalize(m.name) }));
   }
-}
-
-// Patch setLang to rebuild move list
-const _basSetLang = setLang;
-function setLang(lang) {
-  _basSetLang(lang);
-  buildMoveList();
 }
 
 // Init
