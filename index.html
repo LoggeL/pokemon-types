@@ -468,7 +468,8 @@ let selectedSlot = -1;
 let sel1 = null, sel2 = null;
 let selectedPokeId = null;
 let selectedPastTypes = [];
-let opponent = null; // {name, type1, type2, pokeId, past_types}
+let opponent = null; // {name, type1, type2, pokeId, past_types, allMoves}
+let opponentLevel = 50;
 let selectedAbilities = [];
 let activeMove = null;    // expanded move index in panel
 let openPicker = null;    // open type picker index in panel
@@ -680,6 +681,30 @@ function renderEffGroups(groups, labels) {
   return any ? html : '<span style="color:#555;font-size:0.75rem">–</span>';
 }
 
+function getOpponentMovesAtGenLevel() {
+  if (!opponent?.allMoves?.length) return [];
+  const genVGs = Object.entries(VG_TO_GEN).filter(([,g]) => g === currentGen).map(([vg]) => vg);
+  const seen = new Set();
+  const result = [];
+  for (const mv of opponent.allMoves) {
+    if (seen.has(mv.move.name)) continue;
+    const detail = mv.version_group_details.find(d =>
+      d.move_learn_method.name === 'level-up' &&
+      genVGs.includes(d.version_group.name) &&
+      d.level_learned_at <= opponentLevel
+    );
+    if (detail) {
+      seen.add(mv.move.name);
+      const id = mv.move.url.split('/').filter(Boolean).pop();
+      const typeEn = moveTypeCache[id] || null;
+      const nameDE = moveDE?.[id] || null;
+      const dispName = currentLang === 'de' ? (nameDE || capitalize(mv.move.name)) : capitalize(mv.move.name);
+      result.push({ name: dispName, level: detail.level_learned_at, type: typeEn, id });
+    }
+  }
+  return result.sort((a,b) => a.level - b.level);
+}
+
 function getMoveMultiplierVsOpponent(moveType) {
   if (!opponent) return null;
   const { type1, type2 } = getPokeTypesAtGen(opponent, currentGen);
@@ -717,6 +742,22 @@ function renderOpponentSection(slotIdx) {
     </div>`;
   }
 
+  // Opponent moveset
+  let oppMovesetHtml = '';
+  if (opponent?.allMoves?.length) {
+    const lvMoves = getOpponentMovesAtGenLevel();
+    const lvLabel = currentLang === 'de' ? 'Attacken bis Lv.' : 'Moves up to Lv.';
+    oppMovesetHtml = `<div style="margin-top:8px">
+      <div style="font-size:0.65rem;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${lvLabel}${opponentLevel}</div>
+      ${lvMoves.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${lvMoves.map(m => `<span title="Lv.${m.level}" style="font-size:0.72rem;background:rgba(255,255,255,0.07);border-radius:6px;padding:3px 7px;display:flex;align-items:center;gap:4px">
+          ${m.type ? `<span class="badge t-${m.type}" style="font-size:0.6rem;padding:1px 5px">${typeLabel(m.type)}</span>` : ''}
+          ${m.name} <span style="color:#555;font-size:0.65rem">Lv.${m.level}</span>
+        </span>`).join('')}
+      </div>` : `<span style="color:#555;font-size:0.75rem">${currentLang==='de'?'Keine Level-Up-Attacken in dieser Gen/Level-Kombi':'No level-up moves for this gen/level'}</span>`}
+    </div>`;
+  }
+
   return `<div class="opponent-strip">
     <div class="opponent-strip-title">${title}</div>
     <div class="opponent-row">
@@ -725,10 +766,16 @@ function renderOpponentSection(slotIdx) {
         oninput="onOppInput(${slotIdx}, this.value)"
         onkeydown="onOppKey(event, ${slotIdx})"
         onblur="setTimeout(()=>hideOppAc(),200)">
-      ${opponent ? `<button class="opponent-clear" onclick="clearOpponent(${slotIdx})">✕</button>` : ''}
+      ${opponent ? `
+        <input type="number" min="1" max="100" value="${opponentLevel}" title="Level"
+          style="width:54px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e0e0e0;font-size:0.8rem;padding:5px 8px;outline:none;text-align:center"
+          oninput="opponentLevel=Math.min(100,Math.max(1,parseInt(this.value)||1));reRenderPanel(${slotIdx})">
+        <button class="opponent-clear" onclick="clearOpponent(${slotIdx})">✕</button>
+      ` : ''}
     </div>
     <div class="move-ac-list" id="oppAcList" style="display:none;position:relative;top:0;left:0;width:100%;margin-top:4px;max-height:180px;overflow-y:auto;z-index:999"></div>
     ${matchupHtml}
+    ${oppMovesetHtml}
   </div>`;
 }
 
@@ -764,7 +811,7 @@ async function selectOpp(slotIdx, id, name, display) {
     const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const d = await r.json();
     const types = d.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
-    opponent = { name: display, pokeId: id, type1: types[0]||null, type2: types[1]||null, past_types: d.past_types || [] };
+    opponent = { name: display, pokeId: id, type1: types[0]||null, type2: types[1]||null, past_types: d.past_types || [], allMoves: d.moves || [] };
   } catch(e) {}
   reRenderPanel(slotIdx);
 }
