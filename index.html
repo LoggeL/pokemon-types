@@ -575,7 +575,7 @@ function renderEffPanel(idx) {
           <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${typeLabel(mv.type)}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
           ${statsHtml}
           ${desc ? `<p style="font-size:0.78rem;color:#bbb;margin:0 0 10px;line-height:1.5">${desc}</p>` : ''}
-          ${renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
+          ${stats?.power ? renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']]) : ''}
         </div>`;
       })() : ''}
     </div>
