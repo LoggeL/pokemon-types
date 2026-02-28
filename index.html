@@ -1157,15 +1157,16 @@ async function selectFavInModal(id, name, display) {
   const fav = favorites.find(f => f.id === id);
   if (fav && fav.type1) {
     sel1 = fav.type1; sel2 = fav.type2 || null;
+    selectedPastTypes = fav.past_types || [];
     updateTypeSelectors();
     document.getElementById('autofillHint').classList.add('visible');
   } else {
-    // Fetch types
     try {
       const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
       const d = await r.json();
       const types = d.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
       sel1 = types[0]||null; sel2 = types[1]||null;
+      selectedPastTypes = d.past_types || [];
       updateTypeSelectors();
       document.getElementById('autofillHint').classList.add('visible');
     } catch(e) {}
