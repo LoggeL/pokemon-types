@@ -647,7 +647,7 @@ async function selectMoveItem(slotIdx, moveIdx, name, id, display) {
       localStorage.setItem('moveTypes_v1', JSON.stringify(moveTypeCache));
     } catch(e) {}
   }
-  team[slotIdx].moves[moveIdx] = { name: display, type: moveType };
+  team[slotIdx].moves[moveIdx] = { name: display, type: moveType, moveId: id };
   saveTeam();
   activeMove = moveType ? moveIdx : null;
   openPicker = null;
@@ -917,14 +917,28 @@ function setLang(lang) {
   document.getElementById('tab-btn-team').textContent = t('tab_team');
   document.getElementById('tab-btn-favs').textContent = t('tab_favs');
   document.getElementById('tab-btn-search').textContent = t('tab_search');
-  // Update Pokémon names in team from pokeList
+  // Update Pokémon names in team
   team.forEach((p, i) => {
-    if (p && p.pokeId) {
+    if (!p) return;
+    if (p.pokeId) {
       const found = pokeList.find(pk => pk.id === p.pokeId);
       if (found) team[i].name = found.display;
     }
+    // Update move names
+    (p.moves || []).forEach((mv, j) => {
+      if (mv?.moveId) {
+        const found = moveList.find(m => m.id === mv.moveId);
+        if (found) team[i].moves[j].name = found.display;
+      }
+    });
   });
   saveTeam();
+  // Update favorite names
+  favorites.forEach((f, i) => {
+    const found = pokeList.find(pk => pk.id === f.id);
+    if (found) favorites[i].display = found.display;
+  });
+  saveFavs();
   renderTeam();
   renderFavs();
   if (qsActive) { qsActive.style.outline = 'none'; qsActive = null; }
