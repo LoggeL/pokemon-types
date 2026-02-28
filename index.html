@@ -546,10 +546,15 @@ function renderEffPanel(idx) {
     <div class="moves-strip">
       <div class="moves-strip-title">${t('moves')}</div>
       <div class="move-grid">${moveGridHtml}</div>
-      ${activeMove !== null && moves[activeMove]?.type ? `<div class="move-expand" style="margin-top:8px">
-        <div class="move-expand-title">⚡ <span class="badge t-${moves[activeMove].type}">${typeLabel(moves[activeMove].type)}</span>${moves[activeMove].name ? ` — ${moves[activeMove].name}` : ''}</div>
-        ${renderEffGroups(calcMoveOffense(moves[activeMove].type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
-      </div>` : ''}
+      ${activeMove !== null && moves[activeMove]?.type ? (() => {
+        const mv = moves[activeMove];
+        const desc = mv.moveId ? (moveDescCache[mv.moveId]?.[currentLang] || moveDescCache[mv.moveId]?.en || '') : '';
+        return `<div class="move-expand" style="margin-top:8px">
+          <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${typeLabel(mv.type)}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
+          ${desc ? `<p style="font-size:0.78rem;color:#bbb;margin:6px 0 10px;line-height:1.5">${desc}</p>` : ''}
+          ${renderEffGroups(calcMoveOffense(mv.type), [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']])}
+        </div>`;
+      })() : ''}
     </div>
     <div class="eff-body">
       <div class="eff-section">
@@ -638,13 +643,22 @@ async function selectMoveItem(slotIdx, moveIdx, name, id, display) {
   hideMoveAcEl(slotIdx, moveIdx);
   // Fetch type (with cache)
   let moveType = moveTypeCache[id] || null;
-  if (!moveType) {
+  if (!moveType || !moveDescCache[id]) {
     try {
       const r = await fetch(`https://pokeapi.co/api/v2/move/${id}`);
       const d = await r.json();
-      moveType = d.type.name.charAt(0).toUpperCase() + d.type.name.slice(1);
-      moveTypeCache[id] = moveType;
-      localStorage.setItem('moveTypes_v1', JSON.stringify(moveTypeCache));
+      if (!moveType) {
+        moveType = d.type.name.charAt(0).toUpperCase() + d.type.name.slice(1);
+        moveTypeCache[id] = moveType;
+        localStorage.setItem('moveTypes_v1', JSON.stringify(moveTypeCache));
+      }
+      // Grab flavor text in DE + EN
+      const getDesc = (lang) => {
+        const entries = (d.flavor_text_entries || []).filter(e => e.language.name === lang);
+        return entries.length ? entries[entries.length - 1].flavor_text.replace(/\n|\f/g, ' ') : null;
+      };
+      moveDescCache[id] = { de: getDesc('de'), en: getDesc('en') };
+      localStorage.setItem('moveDescs_v1', JSON.stringify(moveDescCache));
     } catch(e) {}
   }
   team[slotIdx].moves[moveIdx] = { name: display, type: moveType, moveId: id };
@@ -1178,6 +1192,7 @@ function saveFavSlot() {
 let moveList = [];
 let moveDE = {};
 let moveTypeCache = JSON.parse(localStorage.getItem('moveTypes_v1') || '{}');
+let moveDescCache = JSON.parse(localStorage.getItem('moveDescs_v1') || '{}');
 let _moveEN = [];
 
 async function loadMoveList() {
