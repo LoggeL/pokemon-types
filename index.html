@@ -112,10 +112,13 @@
   .eff-header-types { display: flex; gap: 5px; flex-wrap: wrap; }
 
   /* Move grid (2×2) */
-  .moves-strip { background: rgba(0,0,0,0.3); padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .moves-strip { background: rgba(0,0,0,0.3); padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); overflow: visible; }
   .moves-strip-title { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .move-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .move-card { background: rgba(255,255,255,0.04); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+  .move-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; overflow: visible; position: relative; }
+  .move-card { background: rgba(255,255,255,0.04); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: border-color 0.15s; }
+  .move-card:hover { border-color: rgba(255,255,255,0.15); }
+  .move-card.active-move { border-color: rgba(255,255,255,0.4); }
+  .move-card-type-bar { border-radius: 10px 10px 0 0; }
   .move-card-type-bar { height: 3px; }
   .move-card-body { padding: 6px 8px; display: flex; align-items: center; gap: 6px; }
   .move-card-input { flex: 1; background: none; border: none; color: #ddd; font-size: 0.78rem; min-width: 0; padding: 0; }
@@ -166,7 +169,7 @@
   .move-input-wrap { flex: 1; position: relative; }
   .move-input-wrap input { width: 100%; background: #0e1628; border: 1px solid #2a2a4e; color: #eee; border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; }
   .move-input-wrap input:focus { outline: none; border-color: #5050cc; }
-  .move-ac-list { position: absolute; left: 0; right: 0; top: 100%; background: #1e2a4a; border: 1px solid #3a3a6e; border-radius: 0 0 8px 8px; max-height: 140px; overflow-y: auto; z-index: 300; }
+  .move-ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 2px); background: #1e2a4a; border: 1px solid #3a3a6e; border-radius: 8px; max-height: 140px; overflow-y: auto; z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
   .move-ac-item { padding: 5px 10px; cursor: pointer; font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
   .move-ac-item:hover, .move-ac-item.focused { background: #2a3a6e; }
   .move-type-btn { border: none; border-radius: 6px; padding: 4px 8px; font-size: 0.7rem; font-weight: 700; cursor: pointer; white-space: nowrap; min-width: 56px; text-align: center; }
@@ -443,21 +446,22 @@ function renderEffPanel(idx) {
     const typeBtnHtml = mv.type
       ? `<button class="move-type-badge-sm" style="${typeStyle(mv.type)}" onmousedown="toggleMoveExpand(${idx},${i})">${mv.type}</button>`
       : `<span class="move-type-badge-sm move-type-badge-empty">?</span>`;
-    moveGridHtml += `<div>
-      <div class="move-card${activeMove===i?' active-move':''}">
+    moveGridHtml += `<div style="position:relative">
+      <div class="move-card${activeMove===i?' active-move':''}" onclick="toggleMoveExpand(${idx},${i})">
         <div class="move-card-type-bar" style="background:${barColor}"></div>
-        <div class="move-card-body" style="position:relative">
-          <div class="move-input-wrap" style="position:relative;flex:1">
+        <div class="move-card-body">
+          <div class="move-input-wrap">
             <input class="move-card-input" type="text" value="${mv.name||''}" placeholder="Attacke ${i+1}…"
               oninput="onMoveInput(${idx},${i},this.value)"
               onkeydown="onMoveKey(event,${idx},${i})"
               onblur="hideMoveAc(${i})"
+              onclick="event.stopPropagation()"
               id="moveIn${idx}_${i}">
-            <div class="move-ac-list" id="moveAc${idx}_${i}" style="display:none"></div>
           </div>
           ${typeBtnHtml}
         </div>
       </div>
+      <div class="move-ac-list" id="moveAc${idx}_${i}" style="display:none"></div>
 
       ${activeMove===i && mv.type ? `<div class="move-expand">
         <div class="move-expand-title">⚡ <span class="badge t-${mv.type}">${mv.type}</span>${mv.name ? ` — ${mv.name}` : ''}</div>
