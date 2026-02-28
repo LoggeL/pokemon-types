@@ -24,6 +24,17 @@
   .move-stats { display: flex; gap: 10px; margin: 4px 0 8px; }
   .move-stat { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; color: #aaa; }
   .move-stat span { font-weight: 700; color: #fff; margin-left: 4px; }
+  .opponent-strip { background: rgba(0,0,0,0.3); padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .opponent-strip-title { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .opponent-row { display: flex; align-items: center; gap: 8px; }
+  .opponent-input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #e0e0e0; font-size: 0.8rem; padding: 5px 10px; outline: none; }
+  .opponent-clear { background: none; border: none; color: #555; font-size: 1rem; cursor: pointer; padding: 2px 6px; }
+  .opponent-info { margin-top: 8px; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; }
+  .opponent-matchup { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+  .matchup-pill { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+  .matchup-super { background: #1a4a1a; color: #8f8; }
+  .matchup-not { background: #4a1a1a; color: #f88; }
+  .matchup-immune { background: #2a2a2a; color: #888; }
 
   /* Tabs */
   .tabs { display: flex; border-bottom: 2px solid #2a2a4e; }
@@ -457,6 +468,7 @@ let selectedSlot = -1;
 let sel1 = null, sel2 = null;
 let selectedPokeId = null;
 let selectedPastTypes = [];
+let opponent = null; // {name, type1, type2, pokeId, past_types}
 let selectedAbilities = [];
 let activeMove = null;    // expanded move index in panel
 let openPicker = null;    // open type picker index in panel
@@ -668,6 +680,100 @@ function renderEffGroups(groups, labels) {
   return any ? html : '<span style="color:#555;font-size:0.75rem">–</span>';
 }
 
+function getMoveMultiplierVsOpponent(moveType) {
+  if (!opponent) return null;
+  const { type1, type2 } = getPokeTypesAtGen(opponent, currentGen);
+  return getDefMultiplier(type1, type2, moveType);
+}
+
+function renderOpponentSection(slotIdx) {
+  const p = team[slotIdx];
+  const moves = p?.moves || [];
+  const title = currentLang === 'de' ? '⚔️ Gegner' : '⚔️ Opponent';
+  const placeholder = currentLang === 'de' ? 'Gegnerisches Pokémon…' : 'Opponent Pokémon…';
+
+  let matchupHtml = '';
+  if (opponent) {
+    const { type1: ot1, type2: ot2 } = getPokeTypesAtGen(opponent, currentGen);
+    const oppArt = opponent.pokeId
+      ? `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${opponent.pokeId}.png" style="width:28px;height:28px;image-rendering:pixelated;vertical-align:middle;margin-right:6px" onerror="this.style.display='none'">`
+      : '';
+    const moveMatchups = moves.filter(mv => mv?.name).map(mv => {
+      const genStats = mv.moveId ? getMoveStatsAtGen(mv.moveId) : null;
+      const effType = genStats?.type || mv.type;
+      if (!effType) return null;
+      const mult = getMoveMultiplierVsOpponent(effType);
+      return { name: mv.name, mult };
+    }).filter(Boolean);
+
+    const multLabel = m => m >= 4 ? '4×' : m >= 2 ? '2×' : m === 0 ? '0×' : m <= 0.25 ? '¼×' : m < 1 ? '½×' : '1×';
+    const multCls = m => m >= 2 ? 'matchup-super' : m === 0 ? 'matchup-immune' : m < 1 ? 'matchup-not' : '';
+
+    matchupHtml = `<div class="opponent-info">
+      <div style="font-size:0.78rem;color:#ccc">${oppArt}<strong>${opponent.name}</strong> ${typeBadge(ot1)}${ot2?typeBadge(ot2):''}</div>
+      ${moveMatchups.length ? `<div class="opponent-matchup">
+        ${moveMatchups.map(m => `<span class="matchup-pill ${multCls(m.mult)}">${m.name}: ${multLabel(m.mult)}</span>`).join('')}
+      </div>` : ''}
+    </div>`;
+  }
+
+  return `<div class="opponent-strip">
+    <div class="opponent-strip-title">${title}</div>
+    <div class="opponent-row">
+      <input class="opponent-input" id="oppInput" type="text" placeholder="${placeholder}"
+        value="${opponent?.name || ''}"
+        oninput="onOppInput(${slotIdx}, this.value)"
+        onkeydown="onOppKey(event, ${slotIdx})"
+        onblur="setTimeout(()=>hideOppAc(),200)">
+      ${opponent ? `<button class="opponent-clear" onclick="clearOpponent(${slotIdx})">✕</button>` : ''}
+    </div>
+    <div class="move-ac-list" id="oppAcList" style="display:none;position:relative;top:0;left:0;width:100%;margin-top:4px;max-height:180px;overflow-y:auto;z-index:999"></div>
+    ${matchupHtml}
+  </div>`;
+}
+
+function onOppInput(slotIdx, val) {
+  if (val.length < 2) { hideOppAc(); return; }
+  const q = val.toLowerCase();
+  const results = pokeList.filter(p => p.display.toLowerCase().includes(q)).slice(0, 6);
+  const el = document.getElementById('oppAcList');
+  if (!el || !results.length) { hideOppAc(); return; }
+  el.style.display = 'block';
+  el.innerHTML = results.map(p =>
+    `<div class="ac-item" onmousedown="selectOpp(${slotIdx},${p.id},'${p.name}','${p.display.replace(/'/g,"\\'")}')">
+      <img class="ac-sprite" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png" onerror="this.style.display='none'">
+      <span>${p.display}</span>
+    </div>`
+  ).join('');
+}
+
+function onOppKey(e, slotIdx) {
+  if (e.key === 'Escape') { hideOppAc(); clearOpponent(slotIdx); }
+}
+
+function hideOppAc() {
+  const el = document.getElementById('oppAcList');
+  if (el) el.style.display = 'none';
+}
+
+async function selectOpp(slotIdx, id, name, display) {
+  hideOppAc();
+  opponent = { name: display, pokeId: id, type1: null, type2: null, past_types: [] };
+  document.getElementById('oppInput') && (document.getElementById('oppInput').value = display);
+  try {
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    const d = await r.json();
+    const types = d.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
+    opponent = { name: display, pokeId: id, type1: types[0]||null, type2: types[1]||null, past_types: d.past_types || [] };
+  } catch(e) {}
+  reRenderPanel(slotIdx);
+}
+
+function clearOpponent(slotIdx) {
+  opponent = null;
+  reRenderPanel(slotIdx);
+}
+
 function renderEffPanel(idx) {
   const p = team[idx];
   if (!p) return '';
@@ -729,6 +835,7 @@ function renderEffPanel(idx) {
     </div>
     ${renderAbilitySection(idx, p)}
     ${renderNatureSection(idx, p)}
+    ${renderOpponentSection(idx)}
     <div class="moves-strip">
       <div class="moves-strip-title">${t('moves')}</div>
       <div class="move-grid">${moveGridHtml}</div>
