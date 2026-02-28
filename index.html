@@ -8,7 +8,12 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
   .app { max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
-  h1 { text-align: center; padding: 16px; font-size: 1.2rem; color: #a0a0c0; letter-spacing: 1px; }
+  h1 { text-align: center; padding: 16px 16px 8px; font-size: 1.2rem; color: #a0a0c0; letter-spacing: 1px; }
+  .lang-toggle { display: flex; justify-content: center; gap: 0; margin-bottom: 8px; }
+  .lang-btn { padding: 4px 14px; border: 1px solid #3a3a6e; background: none; color: #666; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; }
+  .lang-btn:first-child { border-radius: 6px 0 0 6px; }
+  .lang-btn:last-child { border-radius: 0 6px 6px 0; }
+  .lang-btn.active { background: #4040cc; color: #fff; border-color: #4040cc; }
 
   /* Tabs */
   .tabs { display: flex; border-bottom: 2px solid #2a2a4e; }
@@ -108,6 +113,10 @@
 <body>
 <div class="app">
   <h1>⚔️ Pokémon Type Tool</h1>
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="btnDE" onclick="setLang('de')">🇩🇪 Deutsch</button>
+    <button class="lang-btn" id="btnEN" onclick="setLang('en')">🇬🇧 English</button>
+  </div>
 
   <div class="tabs">
     <div class="tab active" onclick="switchTab('team')">🏆 Team</div>
@@ -472,19 +481,65 @@ function switchTab(tab) {
 }
 
 // ─── PokéAPI Autocomplete ───────────────────────────────────────────────────
-let pokeList = []; // [{name, id}]
+let pokeList = []; // [{name, id}] — active language
+let pokeEN = [];   // [{name, id}] — English (canonical)
+let pokeDE = {};   // {id -> deName}
+let currentLang = 'de';
 let acFocusIdx = -1;
 
 async function loadPokeList() {
-  const CACHE_KEY = 'pokeList_v1';
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) { pokeList = JSON.parse(cached); return; }
-  try {
-    const r = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025&offset=0');
-    const d = await r.json();
-    pokeList = d.results.map((p, i) => ({ name: p.name, id: i + 1 }));
-    localStorage.setItem(CACHE_KEY, JSON.stringify(pokeList));
-  } catch(e) { console.warn('PokéAPI not reachable', e); }
+  // Load English list
+  const EN_KEY = 'pokeList_v1';
+  const cachedEN = localStorage.getItem(EN_KEY);
+  if (cachedEN) {
+    pokeEN = JSON.parse(cachedEN);
+  } else {
+    try {
+      const r = await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025&offset=0');
+      const d = await r.json();
+      pokeEN = d.results.map((p, i) => ({ name: p.name, id: i + 1 }));
+      localStorage.setItem(EN_KEY, JSON.stringify(pokeEN));
+    } catch(e) { console.warn('PokéAPI EN not reachable', e); }
+  }
+
+  // Load German names via GraphQL
+  const DE_KEY = 'pokeDE_v1';
+  const cachedDE = localStorage.getItem(DE_KEY);
+  if (cachedDE) {
+    pokeDE = JSON.parse(cachedDE);
+  } else {
+    try {
+      const r = await fetch('https://beta.pokeapi.co/graphql/v1beta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: `{ pokemon_v2_pokemonspeciesname(where: {language_id: {_eq: 6}}) { name pokemon_species_id } }` })
+      });
+      const d = await r.json();
+      d.data.pokemon_v2_pokemonspeciesname.forEach(e => { pokeDE[e.pokemon_species_id] = e.name; });
+      localStorage.setItem(DE_KEY, JSON.stringify(pokeDE));
+    } catch(e) { console.warn('PokéAPI DE not reachable', e); }
+  }
+
+  applyLang();
+}
+
+function applyLang() {
+  if (currentLang === 'de' && Object.keys(pokeDE).length > 0) {
+    pokeList = pokeEN.map(p => ({ id: p.id, name: p.name, display: pokeDE[p.id] || capitalize(p.name) }));
+  } else {
+    pokeList = pokeEN.map(p => ({ id: p.id, name: p.name, display: capitalize(p.name) }));
+  }
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnDE').classList.toggle('active', lang === 'de');
+  document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+  applyLang();
+}
+
+function capitalize(name) {
+  return name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 function onNameInput(val) {
@@ -492,16 +547,20 @@ function onNameInput(val) {
   hint.classList.remove('visible');
   if (val.length < 2) { hideAc(); return; }
   const q = val.toLowerCase();
-  const matches = pokeList.filter(p => p.name.startsWith(q)).slice(0, 8);
+  // Search display name (active lang) and English name
+  const matches = pokeList.filter(p =>
+    p.display.toLowerCase().startsWith(q) || p.name.startsWith(q)
+  ).slice(0, 8);
   if (!matches.length) { hideAc(); return; }
   acFocusIdx = -1;
   const list = document.getElementById('acList');
   list.style.display = 'block';
-  list.innerHTML = matches.map((p, i) => {
+  list.innerHTML = matches.map((p) => {
     const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png`;
-    return `<div class="ac-item" data-name="${p.name}" data-id="${p.id}" onmousedown="selectPoke('${p.name}',${p.id})">
+    const sub = currentLang === 'de' ? `<span style="color:#666;font-size:0.7rem">${capitalize(p.name)}</span>` : '';
+    return `<div class="ac-item" data-name="${p.name}" data-id="${p.id}" onmousedown="selectPoke('${p.name}',${p.id},'${p.display}')">
       <img class="ac-sprite" src="${spriteUrl}" onerror="this.style.display='none'">
-      <span class="ac-name">${p.name}</span>
+      <span class="ac-name">${p.display} ${sub}</span>
     </div>`;
   }).join('');
 }
@@ -514,7 +573,7 @@ function onNameKey(e) {
   else if (e.key === 'ArrowUp') { acFocusIdx = Math.max(acFocusIdx - 1, 0); updateAcFocus(items); e.preventDefault(); }
   else if (e.key === 'Enter' && acFocusIdx >= 0) {
     const item = items[acFocusIdx];
-    selectPoke(item.dataset.name, parseInt(item.dataset.id));
+    selectPoke(item.dataset.name, parseInt(item.dataset.id), item.querySelector('.ac-name')?.innerText?.split('\n')[0]);
     e.preventDefault();
   } else if (e.key === 'Escape') { hideAc(); }
 }
@@ -528,11 +587,9 @@ function hideAc() {
   document.getElementById('acList').style.display = 'none';
 }
 
-async function selectPoke(name, id) {
+async function selectPoke(name, id, display) {
   hideAc();
-  // Capitalize display name
-  const displayName = name.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-  document.getElementById('pokeName').value = displayName;
+  document.getElementById('pokeName').value = display || capitalize(name);
 
   // Fetch types from PokeAPI
   try {
@@ -550,7 +607,8 @@ async function selectPoke(name, id) {
   } catch(e) { console.warn('Could not fetch types', e); }
 }
 
-// Init
+// Init — start with DE as default
+currentLang = 'de';
 loadPokeList();
 renderTeam();
 renderQsTypes();
