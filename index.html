@@ -169,7 +169,7 @@ const CHART = {
 };
 
 // State
-let team = JSON.parse(localStorage.getItem('pokeTeam') || 'Array(6).fill(null)');
+let team = JSON.parse(localStorage.getItem('pokeTeam') || '[null,null,null,null,null,null]');
 if (!Array.isArray(team) || team.length !== 6) team = Array(6).fill(null);
 let editingSlot = -1;
 let selectedSlot = -1;
