@@ -353,6 +353,27 @@ const TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Pois
 
 const TYPE_MIN_GEN = { Dark: 2, Steel: 2, Fairy: 6 }; // all others: Gen 1
 
+const GEN_NAME_TO_NUM = {
+  'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,
+  'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9
+};
+
+function getPokeTypesAtGen(p, gen) {
+  if (!p.past_types?.length) return { type1: p.type1, type2: p.type2 };
+  const sorted = [...p.past_types]
+    .map(pt => ({ ...pt, g: GEN_NAME_TO_NUM[pt.generation?.name] || 9 }))
+    .sort((a,b) => a.g - b.g);
+  for (const pt of sorted) {
+    if (gen <= pt.g) {
+      const types = pt.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
+      // Filter types that exist in this gen
+      const filtered = types.filter(t => (TYPE_MIN_GEN[t]||1) <= gen);
+      return { type1: filtered[0] || p.type1, type2: filtered[1] || null };
+    }
+  }
+  return { type1: p.type1, type2: p.type2 };
+}
+
 function typesForGen(gen) {
   return TYPES.filter(t => (TYPE_MIN_GEN[t] || 1) <= gen);
 }
@@ -429,12 +450,13 @@ let team = JSON.parse(localStorage.getItem('pokeTeam') || '[null,null,null,null,
 if (!Array.isArray(team) || team.length !== 6) team = Array(6).fill(null);
 
 // Migrate old slots without moves/pokeId
-team = team.map(p => p ? { name: p.name, type1: p.type1, type2: p.type2 || null, pokeId: p.pokeId || null, moves: p.moves || [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}] } : null);
+team = team.map(p => p ? { name: p.name, type1: p.type1, type2: p.type2 || null, pokeId: p.pokeId || null, past_types: p.past_types || [], moves: p.moves || [{name:'',type:null},{name:'',type:null},{name:'',type:null},{name:'',type:null}] } : null);
 
 let editingSlot = -1;
 let selectedSlot = -1;
 let sel1 = null, sel2 = null;
 let selectedPokeId = null;
+let selectedPastTypes = [];
 let activeMove = null;    // expanded move index in panel
 let openPicker = null;    // open type picker index in panel
 let moveAcIdx = [-1,-1,-1,-1]; // focused ac item per move
@@ -512,14 +534,15 @@ function renderEffGroups(groups, labels) {
 function renderEffPanel(idx) {
   const p = team[idx];
   if (!p) return '';
-  const def = calcDefense(p.type1, p.type2);
-  const atk = calcAttack(p.type1, p.type2);
+  const { type1, type2 } = getPokeTypesAtGen(p, currentGen);
+  const def = calcDefense(type1, type2);
+  const atk = calcAttack(type1, type2);
   const defLabels = [[4,'4×','lbl-4x'],[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0.25,'¼×','lbl-025x'],[0,'0×','lbl-0x']];
   const atkLabels = [[2,'2×','lbl-2x'],[0.5,'½×','lbl-05x'],[0,'0×','lbl-0x']];
 
   // Header background gradient
-  const col1 = TYPE_COLORS[p.type1];
-  const col2 = p.type2 ? TYPE_COLORS[p.type2] : col1;
+  const col1 = TYPE_COLORS[type1] || '#3a3a6e';
+  const col2 = type2 ? TYPE_COLORS[type2] : col1;
   const artUrl = p.pokeId
     ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.pokeId}.png`
     : null;
@@ -562,7 +585,7 @@ function renderEffPanel(idx) {
       ${artHtml}
       <div class="eff-header-info">
         <h3>${p.name}</h3>
-        <div class="eff-header-types">${typeBadge(p.type1)}${p.type2?typeBadge(p.type2):''}</div>
+        <div class="eff-header-types">${typeBadge(type1)}${type2?typeBadge(type2):''}</div>
       </div>
     </div>
     <div class="moves-strip">
@@ -708,8 +731,9 @@ function renderTeam() {
 
     if (p) {
       // Background gradient from type color
-      const col1 = TYPE_COLORS[p.type1] || '#3a3a6e';
-      const col2 = p.type2 ? TYPE_COLORS[p.type2] : col1;
+      const { type1: gt1, type2: gt2 } = getPokeTypesAtGen(p, currentGen);
+      const col1 = TYPE_COLORS[gt1] || '#3a3a6e';
+      const col2 = gt2 ? TYPE_COLORS[gt2] : col1;
       div.innerHTML = `
         <div class="slot-bg" style="background:linear-gradient(135deg,${col1},${col2})"></div>
         <button class="slot-clear" onclick="clearSlot(event,${i})">✕</button>
@@ -718,7 +742,7 @@ function renderTeam() {
           : `<div class="slot-placeholder">⚪</div>`
         }
         <div class="slot-name">${p.name}</div>
-        <div class="slot-types">${typeBadge(p.type1)}${p.type2 ? typeBadge(p.type2) : ''}</div>`;
+        <div class="slot-types">${typeBadge(gt1)}${gt2 ? typeBadge(gt2) : ''}</div>`;
       div.onclick = (e) => { if (!e.target.classList.contains('slot-clear')) selectSlot(i); };
     } else {
       div.innerHTML = `<div class="slot-add">＋</div>`;
@@ -754,6 +778,7 @@ function openModal(idx) {
   editingSlot = idx;
   sel1 = null; sel2 = null;
   selectedPokeId = null;
+  selectedPastTypes = [];
   document.getElementById('pokeName').value = '';
   document.getElementById('autofillHint').classList.remove('visible');
   document.getElementById('typeOverridePanel').style.display = 'none';
@@ -833,6 +858,7 @@ function saveSlot() {
     type1: sel1,
     type2: sel2 || null,
     pokeId: selectedPokeId || null,
+    past_types: selectedPastTypes || [],
     moves: existingMoves
   };
   saveTeam();
@@ -1064,6 +1090,7 @@ async function selectPoke(name, id, display) {
     });
     sel1 = types[0] || null;
     sel2 = types[1] || null;
+    selectedPastTypes = d.past_types || [];
     updateTypeSelectors();
     const hint = document.getElementById('autofillHint');
     hint.classList.add('visible');
@@ -1096,8 +1123,10 @@ async function addFav(id, name, display) {
     const d = await r.json();
     const types = d.types.sort((a,b)=>a.slot-b.slot).map(t=>t.type.name.charAt(0).toUpperCase()+t.type.name.slice(1));
     type1 = types[0]||null; type2 = types[1]||null;
+    past_types = d.past_types || [];
   } catch(e) {}
-  favorites.push({ id, name, display, type1, type2 });
+  let past_types = [];
+  favorites.push({ id, name, display, type1, type2, past_types });
   saveFavs();
   const input = document.getElementById('pokeName');
   if (input && input.value.length >= 2) onNameInput(input.value);
@@ -1183,6 +1212,7 @@ function addFavToTeam(favIdx) {
     type1: f.type1,
     type2: f.type2,
     pokeId: f.id,
+    past_types: f.past_types || [],
     moves: Array(4).fill(null).map(()=>({name:'',type:null}))
   };
   saveTeam();
